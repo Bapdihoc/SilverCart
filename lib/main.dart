@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:silvercart/env.dart';
+import 'package:silvercart/injection.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  await configureDependencies(Environments.prod); // or Environments.dev
   runApp(const MyApp());
 }
 

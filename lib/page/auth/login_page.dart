@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../network/service/auth_service.dart';
+import '../../injection.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,14 +14,21 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(text: 'set_your_own_mail_in_db4@gmail.com');
+  final _passwordController = TextEditingController(text: 'String@111');
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = getIt<AuthService>();
+  }
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -38,18 +46,70 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final result = await _authService.signIn(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
 
-    // Navigate to family home page with role parameter
-    if (mounted) {
-      context.go('/home?role=family');
+        if (result.isSuccess && result.data != null) {
+          // Login thành công
+          final loginData = result.data!;
+          
+          // Token và user data đã được lưu tự động trong AuthService
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đăng nhập thành công!'),
+              backgroundColor: AppColors.success,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate based on role
+          final role = loginData.role.toLowerCase();
+          if (role == 'family' || role == 'guardian') {
+            context.go('/home?role=family');
+          } else if (role == 'elderly') {
+            context.go('/home?role=elderly');
+          } else {
+            context.go('/home');
+          }
+        } else {
+          // Login thất bại
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Đăng nhập thất bại'),
+              backgroundColor: AppColors.error,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -126,29 +186,30 @@ class _LoginPageState extends State<LoginPage> {
 
                   SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
 
-                  // Phone Field
+                  // Email Field
                   TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !_isLoading,
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 18,
                     ),
                     decoration: ResponsiveHelper.responsiveInputDecoration(
                       context: context,
-                      labelText: 'Số điện thoại',
-                      hintText: 'Nhập số điện thoại của bạn',
+                      labelText: 'Email',
+                      hintText: 'Nhập email của bạn',
                       prefixIcon: Icon(
-                        Icons.phone_outlined,
+                        Icons.email_outlined,
                         size: ResponsiveHelper.getIconSize(context, 20),
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập số điện thoại';
+                        return 'Vui lòng nhập email';
                       }
-                      if (!RegExp(r'^[0-9]{10,11}$').hasMatch(value)) {
-                        return 'Số điện thoại không hợp lệ';
+                      if (!RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        return 'Email không hợp lệ';
                       }
                       return null;
                     },
@@ -160,6 +221,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
+                    enabled: !_isLoading,
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 18,
@@ -177,7 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                           _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                           size: ResponsiveHelper.getIconSize(context, 20),
                         ),
-                        onPressed: _togglePasswordVisibility,
+                        onPressed: _isLoading ? null : _togglePasswordVisibility,
                       ),
                     ),
                     validator: (value) {

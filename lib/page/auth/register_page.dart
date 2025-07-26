@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../network/service/auth_service.dart';
+import '../../injection.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -22,6 +24,13 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = getIt<AuthService>();
+  }
 
   @override
   void dispose() {
@@ -52,22 +61,45 @@ class _RegisterPageState extends State<RegisterPage> {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      await _authService.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        phone: _phoneController.text.trim(),
+        fullName: _fullNameController.text.trim(),
+        gender: 'string',
+        address: {
+          'streetAddress': 'string',
+          'wardCode': '510101',
+          'districtId': 1566,
+          'toDistrictName': 'string',
+          'toProvinceName': 'string',
+        },
+        isGuardian: true,
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    // Show success message and navigate to login
-    if (mounted) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        context.go('/login/family');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
-          backgroundColor: AppColors.success,
+        SnackBar(
+          content: Text('Đăng ký thất bại: ${e.toString()}'),
+          backgroundColor: AppColors.error,
         ),
       );
-      context.go('/login/family');
     }
   }
 
