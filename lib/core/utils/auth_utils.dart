@@ -14,7 +14,7 @@ class AuthUtils {
   static Future<String?> getAccessToken() => _authService.getAccessToken();
 
   /// Get current user refresh token  
-  static Future<String?> getRefreshToken() => _authService.getRefreshToken();
+  // static Future<String?> getRefreshToken() => _authService.getRefreshToken();
 
   /// Get current user ID
   static Future<String?> getUserId() => _authService.getUserId();

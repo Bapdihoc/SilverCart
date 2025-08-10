@@ -4,9 +4,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:convert';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/models/elderly_model.dart';
+import '../../network/service/auth_service.dart';
+import '../../injection.dart';
 
 class ElderlyQRManagementPage extends StatefulWidget {
   final Elderly elderly;
@@ -28,12 +31,14 @@ class _ElderlyQRManagementPageState extends State<ElderlyQRManagementPage>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   int _selectedExpiryHours = 24; // Default 24 hours
+  late final AuthService _authService;
 
   final List<int> _expiryOptions = [1, 6, 12, 24, 48, 72, 168]; // Hours
 
   @override
   void initState() {
     super.initState();
+    _authService = getIt<AuthService>();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -104,30 +109,42 @@ class _ElderlyQRManagementPageState extends State<ElderlyQRManagementPage>
     });
 
     try {
-      // TODO: Generate new QR code via API
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+      // Call API to generate QR code
+      final result = await _authService.generateQr(widget.elderly.id);
       
-      final newCode = 'QR_${widget.elderly.id}_${DateTime.now().millisecondsSinceEpoch}';
-      final expiresAt = DateTime.now().add(Duration(hours: _selectedExpiryHours));
-      
-      _currentQRCode = QRCodeData(
-        elderlyId: widget.elderly.id,
-        code: newCode,
-        expiresAt: expiresAt,
-        generatedAt: DateTime.now(),
-        generatedBy: widget.elderly.managedBy,
-      );
-
-      _animationController.reset();
-      _animationController.forward();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tạo QR code mới thành công!'),
-            backgroundColor: AppColors.success,
-          ),
+      if (result.isSuccess && result.data != null) {
+        // Parse JWT token to get expiration time
+        final token = result.data!.data.token;
+        final expiresAt = _parseJwtExpiration(token);
+        
+        _currentQRCode = QRCodeData(
+          elderlyId: widget.elderly.id,
+          code: token, // Use the JWT token as QR code data
+          expiresAt: expiresAt,
+          generatedAt: DateTime.now(),
+          generatedBy: widget.elderly.managedBy,
         );
+
+        _animationController.reset();
+        _animationController.forward();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.data!.message),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Không thể tạo QR code'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -144,6 +161,36 @@ class _ElderlyQRManagementPageState extends State<ElderlyQRManagementPage>
           _isGenerating = false;
         });
       }
+    }
+  }
+
+  DateTime _parseJwtExpiration(String token) {
+    try {
+      // JWT tokens have 3 parts separated by dots
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        return DateTime.now().add(Duration(hours: _selectedExpiryHours));
+      }
+
+      // Decode the payload (second part)
+      final payload = parts[1];
+      // Add padding if needed
+      final paddedPayload = payload + '=' * (4 - payload.length % 4);
+      
+      // Decode base64
+      final decoded = utf8.decode(base64Url.decode(paddedPayload));
+      final payloadMap = json.decode(decoded);
+      
+      // Get expiration time
+      final exp = payloadMap['exp'];
+      if (exp != null) {
+        return DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      }
+      
+      return DateTime.now().add(Duration(hours: _selectedExpiryHours));
+    } catch (e) {
+      // Fallback to default expiration
+      return DateTime.now().add(Duration(hours: _selectedExpiryHours));
     }
   }
 

@@ -15,7 +15,7 @@ dependencies:
   google_fonts: ^6.1.0
   get: 4.7.2
   # QR Code functionality
-  qr_flutter:
+  qr_flutter: ^4.1.0
   # qr_code_scanner:
   # Image picker
   image_picker:
@@ -24,8 +24,15 @@ dependencies:
   get_it:
   flutter_dotenv:
   shared_preferences:
+  http:
   flutter: 
     sdk: flutter
+  google_speech: ^5.3.0
+  flutter_tts: ^4.2.3
+  permission_handler: ^12.0.1
+  agora_rtc_engine: ^6.5.2
+  path_provider: ^2.1.5
+  device_info_plus: ^11.5.0
 
 dev_dependencies: 
   flutter_lints: ^5.0.0

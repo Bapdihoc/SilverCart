@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:silvercart/network/service/auth_service.dart';
+import 'package:silvercart/injection.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../routes/app_routes.dart';
 
 class GuardianSettingsPage extends StatefulWidget {
   const GuardianSettingsPage({super.key});
@@ -22,6 +26,14 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
     '中文',
     '한국어',
   ];
+
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = getIt<AuthService>();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -609,27 +621,42 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              // TODO: Implement logout logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Đã đăng xuất thành công!',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+              try {
+                await _authService.signOut();
+                if (mounted) {
+                  context.pushReplacement('/role-selection');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Đã đăng xuất thành công!',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 14,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+                      ),
                     ),
-                  ),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-                  ),
-                ),
-              );
+                  );
+                 
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đăng xuất thất bại: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

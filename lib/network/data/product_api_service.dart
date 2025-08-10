@@ -4,6 +4,8 @@ import 'package:injectable/injectable.dart';
 import 'package:retrofit/http.dart';
 import 'package:silvercart/models/category_response.dart';
 import 'package:silvercart/models/product_response.dart';
+import 'package:silvercart/models/product_search_response.dart';
+import 'package:silvercart/models/product_detail_response.dart';
 part 'product_api_service.g.dart';
 
 class ParseErrorLogger {
@@ -37,5 +39,10 @@ abstract class ProductApiService {
 
   @GET('/api/Product/category/{id}')
   Future<CategoryModel> getProductCategory(@Path('id') int id);
-  
+
+  @POST('/api/Product/Search')
+  Future<ProductSearchResponse> searchProducts(@Body() Map<String, dynamic> body);
+
+  @GET('/api/Product/GetWithStylesById/{id}')
+  Future<ProductDetailResponse> getProductDetail(@Path('id') String id);
 }

@@ -3,6 +3,9 @@ import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/category_response.dart';
 import 'package:silvercart/models/product_request.dart';
 import 'package:silvercart/models/product_response.dart';
+import 'package:silvercart/models/product_search_request.dart';
+import 'package:silvercart/models/product_search_response.dart';
+import 'package:silvercart/models/product_detail_response.dart';
 import 'package:silvercart/network/repositories/product/product_repository.dart';
 
 @LazySingleton()
@@ -103,8 +106,8 @@ class ProductService {
     }).toList();
   }
 
-  // Search products
-  List<Map<String, dynamic>> searchProducts(
+  // Filter products by search query
+  List<Map<String, dynamic>> filterProductsBySearch(
     List<Map<String, dynamic>> products, 
     String searchQuery
   ) {
@@ -126,6 +129,65 @@ class ProductService {
   Future<BaseResponse<CategoryResponse>> getProductCategories(ProductRequest request) async {
     return _repo.getProductCategories(request);
   }
-  
-  
+
+  Future<BaseResponse<ProductSearchResponse>> searchProducts(ProductSearchRequest request) async {
+    return _repo.searchProducts(request);
+  }
+
+  Future<BaseResponse<ProductDetailResponse>> getProductDetail(String id) async {
+    return _repo.getProductDetail(id);
+  }
+
+  // Map SearchProductItem from search API to UI format
+  Map<String, dynamic> mapSearchProductToUI(SearchProductItem product) {
+    // Get category emoji
+    final categoryEmoji = _getSearchCategoryEmoji(product.categories);
+
+    return {
+      'id': product.id,
+      'name': product.name,
+      'emoji': categoryEmoji,
+      'price': product.price.toInt(),
+      'originalPrice': null, // No original price in search API
+      'discount': null, // No discount in search API
+      'rating': 4.5, // TODO: Add rating from API when available
+      'reviews': 0, // TODO: Add reviews from API when available
+      'category': categoryEmoji + ' ' + (product.categories.isNotEmpty 
+          ? product.categories.first.label 
+          : 'Khác'),
+      'subCategory': product.categories.length > 1 ? product.categories[1].label : '',
+      'description': product.description,
+      'brand': product.brand,
+      'imageUrl': product.imageUrl,
+      'image': categoryEmoji, // Use emoji for now
+    };
+  }
+
+  // Map category from search API to emoji
+  String _getSearchCategoryEmoji(List<SearchProductCategory> categories) {
+    if (categories.isEmpty) return '📦';
+    
+    final categoryLabel = categories.first.label.toLowerCase();
+    
+    if (categoryLabel.contains('di chuyển') || categoryLabel.contains('mobility')) return '🦯';
+    if (categoryLabel.contains('sức khỏe') || categoryLabel.contains('health')) return '💊';
+    if (categoryLabel.contains('chăm sóc') || categoryLabel.contains('care')) return '🧴';
+    if (categoryLabel.contains('gia dụng') || categoryLabel.contains('household')) return '🏠';
+    if (categoryLabel.contains('quần áo') || categoryLabel.contains('clothing')) return '👕';
+    if (categoryLabel.contains('điện tử') || categoryLabel.contains('electronic')) return '📱';
+    if (categoryLabel.contains('thực phẩm') || categoryLabel.contains('food')) return '🍎';
+    
+    return '📦';
+  }
+
+  // Search products and return UI format
+  Future<List<Map<String, dynamic>>> searchProductsForUI(ProductSearchRequest request) async {
+    final result = await searchProducts(request);
+    
+    if (result.isSuccess && result.data != null) {
+      return result.data!.data.items.map((product) => mapSearchProductToUI(product)).toList();
+    }
+    
+    return [];
+  }
 }

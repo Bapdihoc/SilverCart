@@ -22,41 +22,6 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      // appBar: AppBar(
-      //   backgroundColor: AppColors.primary,
-      //   elevation: 0,
-      //   title: Text(
-      //     'SilverCart',
-      //     style: ResponsiveHelper.responsiveTextStyle(
-      //       context: context,
-      //       baseSize: 20,
-      //       fontWeight: FontWeight.bold,
-      //       color: Colors.white,
-      //     ),
-      //   ),
-      //   actions: [
-      //     IconButton(
-      //       icon: Icon(
-      //         Icons.notifications_outlined,
-      //         size: ResponsiveHelper.getIconSize(context, 24),
-      //         color: Colors.white,
-      //       ),
-      //       onPressed: () {
-      //         // TODO: Show notifications
-      //       },
-      //     ),
-      //     IconButton(
-      //       icon: Icon(
-      //         Icons.person_outline,
-      //         size: ResponsiveHelper.getIconSize(context, 24),
-      //         color: Colors.white,
-      //       ),
-      //       onPressed: () {
-      //         // TODO: Show profile
-      //       },
-      //     ),
-      //   ],
-      // ),
       body: IndexedStack(
         index: _selectedIndex,
         children: [
@@ -67,76 +32,166 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
           GuardianSettingsPage(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.grey,
-        selectedLabelStyle: ResponsiveHelper.responsiveTextStyle(
-          context: context,
-          baseSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: ResponsiveHelper.responsiveTextStyle(
-          context: context,
-          baseSize: 14,
-        ),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.dashboard,
-              size: ResponsiveHelper.getIconSize(context, 24),
-            ),
-            label: 'Tổng quan',
+      bottomNavigationBar: _buildModernBottomNavigation(),
+    );
+  }
+
+  Widget _buildModernBottomNavigation() {
+    return Container(
+      margin: EdgeInsets.only(
+        left: ResponsiveHelper.getLargeSpacing(context),
+        right: ResponsiveHelper.getLargeSpacing(context),
+        bottom: ResponsiveHelper.getLargeSpacing(context),
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+            spreadRadius: 0,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.family_restroom,
-              size: ResponsiveHelper.getIconSize(context, 24),
-            ),
-            label: 'Người thân',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.location_on,
-              size: ResponsiveHelper.getIconSize(context, 24),
-            ),
-            label: 'Địa chỉ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.approval,
-              size: ResponsiveHelper.getIconSize(context, 24),
-            ),
-            label: 'Duyệt đơn',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.settings,
-              size: ResponsiveHelper.getIconSize(context, 24),
-            ),
-            label: 'Cài đặt',
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+            spreadRadius: 0,
           ),
         ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: Container(
+          height: 70,
+          padding: EdgeInsets.symmetric(
+            horizontal: ResponsiveHelper.getSpacing(context),
+            vertical: ResponsiveHelper.getSpacing(context) / 2,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.dashboard_rounded,
+                label: 'Tổng quan',
+                index: 0,
+              ),
+              _buildNavItem(
+                icon: Icons.family_restroom_rounded,
+                label: 'Người thân',
+                index: 1,
+              ),
+              _buildNavItem(
+                icon: Icons.location_on_rounded,
+                label: 'Địa chỉ',
+                index: 2,
+              ),
+              _buildNavItem(
+                icon: Icons.approval_rounded,
+                label: 'Duyệt đơn',
+                index: 3,
+              ),
+              _buildNavItem(
+                icon: Icons.settings_rounded,
+                label: 'Cài đặt',
+                index: 4,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-
-
-
-
-
-
-
-
-
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: ResponsiveHelper.getSpacing(context) / 2,
+          vertical: ResponsiveHelper.getSpacing(context) / 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          border: isSelected
+              ? Border.all(
+                  color: AppColors.primary.withOpacity(0.3),
+                  width: 1,
+                )
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon với animation
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context) / 3),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Icon(
+                icon,
+                size: ResponsiveHelper.getIconSize(context, 20),
+                color: isSelected
+                    ? Colors.white
+                    : AppColors.grey,
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context) / 3),
+            // Label với animation
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: isSelected ? 10 : 9,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? AppColors.primary : AppColors.grey,
+              ),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 } 

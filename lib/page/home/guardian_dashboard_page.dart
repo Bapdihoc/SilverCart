@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:silvercart/page/elderly_management/elderly_list_page.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
@@ -23,7 +24,6 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              _buildWelcomeSection(),
               _buildQuickStats(),
               _buildQuickActions(),
               _buildRecentActivities(),
@@ -41,13 +41,32 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: ResponsiveHelper.getIconSize(context, 25),
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+          // Avatar tròn với gradient
+          Container(
+            width: ResponsiveHelper.getIconSize(context, 50),
+            height: ResponsiveHelper.getIconSize(context, 50),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary,
+                  AppColors.secondary,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
             child: Icon(
               Icons.person,
               size: ResponsiveHelper.getIconSize(context, 25),
-              color: AppColors.primary,
+              color: Colors.white,
             ),
           ),
           SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
@@ -59,13 +78,13 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                   'Xin chào! 👋',
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
-                    baseSize: 18,
-                    fontWeight: FontWeight.w600,
+                    baseSize: 20,
+                    fontWeight: FontWeight.bold,
                     color: AppColors.text,
                   ),
                 ),
                 Text(
-                  'Quản lý mua sắm cho người thân',
+                  'Chào mừng bạn trở lại',
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 14,
@@ -75,89 +94,44 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               ],
             ),
           ),
+          // Notification icon tròn với animation
           Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+            width: ResponsiveHelper.getIconSize(context, 50),
+            height: ResponsiveHelper.getIconSize(context, 50),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+              borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Icon(
-              Icons.notifications_outlined,
-              size: ResponsiveHelper.getIconSize(context, 24),
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWelcomeSection() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Text(
-                  '🎯 Dashboard',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Center(
+                  child: Icon(
+                    Icons.notifications_outlined,
+                    size: ResponsiveHelper.getIconSize(context, 24),
+                    color: AppColors.primary,
                   ),
                 ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                Text(
-                  'Quản lý mua sắm thông minh cho người thân yêu',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 16,
-                    color: Colors.white.withOpacity(0.9),
+                // Notification badge
+                Positioned(
+                  top: ResponsiveHelper.getSpacing(context),
+                  right: ResponsiveHelper.getSpacing(context),
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-            ),
-            child: Icon(
-              Icons.family_restroom,
-              size: ResponsiveHelper.getIconSize(context, 40),
-              color: Colors.white,
             ),
           ),
         ],
@@ -171,31 +145,51 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '📊 Thống kê nhanh',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Thống kê nhanh',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           Row(
             children: [
               Expanded(
                 child: _buildModernStatCard(
-                  icon: '👥',
+                  icon: Icons.people_rounded,
                   title: 'Người thân',
                   value: '3',
                   color: AppColors.primary,
                   gradient: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_)=> ElderlyListPage()));
+                  },
                 ),
               ),
               SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
               Expanded(
                 child: _buildModernStatCard(
-                  icon: '🛒',
+                  icon: Icons.shopping_cart_rounded,
                   title: 'Đơn hàng',
                   value: '12',
                   color: AppColors.secondary,
@@ -209,7 +203,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             children: [
               Expanded(
                 child: _buildModernStatCard(
-                  icon: '⏳',
+                  icon: Icons.pending_actions_rounded,
                   title: 'Chờ xử lý',
                   value: '2',
                   color: AppColors.warning,
@@ -219,7 +213,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
               Expanded(
                 child: _buildModernStatCard(
-                  icon: '✅',
+                  icon: Icons.check_circle_rounded,
                   title: 'Hoàn thành',
                   value: '10',
                   color: AppColors.success,
@@ -234,57 +228,69 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   }
 
   Widget _buildModernStatCard({
-    required String icon,
+    required IconData icon,
     required String title,
     required String value,
     required Color color,
     required List<Color> gradient,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onTap: onTap ?? () {},
+      child: Container(
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            icon,
-            style: TextStyle(
-              fontSize: ResponsiveHelper.getIconSize(context, 32),
+        child: Column(
+          children: [
+            // Icon tròn với background
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 50),
+              height: ResponsiveHelper.getIconSize(context, 50),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
+              ),
+              child: Icon(
+                icon,
+                size: ResponsiveHelper.getIconSize(context, 28),
+                color: Colors.white,
+              ),
             ),
-          ),
-          SizedBox(height: ResponsiveHelper.getSpacing(context)),
-          Text(
-            value,
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Text(
+              value,
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
-          Text(
-            title,
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 14,
-              color: Colors.white.withOpacity(0.9),
-              fontWeight: FontWeight.w500,
+            Text(
+              title,
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 14,
+                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -295,14 +301,31 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '⚡ Thao tác nhanh',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.secondary, AppColors.primary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Thao tác nhanh',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           GridView.count(
@@ -311,19 +334,19 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             crossAxisCount: 2,
             crossAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
             mainAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
-            childAspectRatio: 1.0,
+            childAspectRatio: 1.1,
             children: [
               _buildModernActionCard(
-                icon: '👤',
+                icon: Icons.person_add_rounded,
                 title: 'Thêm người thân',
-                subtitle: 'Tạo hồ sơ mới',
+                subtitle: '',
                 color: AppColors.primary,
                 onTap: () {
                   // TODO: Add family member
                 },
               ),
               _buildModernActionCard(
-                icon: '📱',
+                icon: Icons.qr_code_rounded,
                 title: 'Tạo mã QR',
                 subtitle: 'Cho đăng nhập',
                 color: AppColors.secondary,
@@ -332,7 +355,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 },
               ),
               _buildModernActionCard(
-                icon: '🛍️',
+                icon: Icons.shopping_bag_rounded,
                 title: 'Đặt hàng',
                 subtitle: 'Mua sắm ngay',
                 color: AppColors.success,
@@ -340,13 +363,13 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ProductCatalogPage(),
+                      builder: (context) => const ProductGuardianPage(),
                     ),
                   );
                 },
               ),
               _buildModernActionCard(
-                icon: '💰',
+                icon: Icons.account_balance_wallet_rounded,
                 title: 'Ngân sách',
                 subtitle: 'Quản lý chi tiêu',
                 color: AppColors.warning,
@@ -367,7 +390,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   }
 
   Widget _buildModernActionCard({
-    required String icon,
+    required IconData icon,
     required String title,
     required String subtitle,
     required Color color,
@@ -379,12 +402,12 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
         padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.2),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              blurRadius: 25,
+              offset: const Offset(0, 10),
             ),
           ],
           border: Border.all(
@@ -395,17 +418,32 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Icon tròn với gradient
             Container(
-              padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+              width: ResponsiveHelper.getIconSize(context, 60),
+              height: ResponsiveHelper.getIconSize(context, 60),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-              ),
-              child: Text(
-                icon,
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.getIconSize(context, 28),
+                gradient: LinearGradient(
+                  colors: [
+                    color,
+                    color.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 30)),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(
+                icon,
+                size: ResponsiveHelper.getIconSize(context, 30),
+                color: Colors.white,
               ),
             ),
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
@@ -414,7 +452,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               textAlign: TextAlign.center,
               style: ResponsiveHelper.responsiveTextStyle(
                 context: context,
-                baseSize: 16,
+                baseSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.text,
               ),
@@ -441,18 +479,35 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '🕒 Hoạt động gần đây',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.success, AppColors.warning],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Hoạt động gần đây',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           _buildModernActivityCard(
-            icon: '🛒',
+            icon: Icons.shopping_cart_rounded,
             title: 'Đơn hàng mới',
             subtitle: 'Bà Nguyễn Thị A đã đặt hàng',
             time: '5 phút trước',
@@ -460,7 +515,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
           ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           _buildModernActivityCard(
-            icon: '🚚',
+            icon: Icons.local_shipping_rounded,
             title: 'Đơn hàng đang giao',
             subtitle: 'Đơn hàng DH001 đang được giao',
             time: '30 phút trước',
@@ -468,7 +523,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
           ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           _buildModernActivityCard(
-            icon: '✅',
+            icon: Icons.check_circle_rounded,
             title: 'Đơn hàng hoàn thành',
             subtitle: 'Đơn hàng DH002 đã giao thành công',
             time: '2 giờ trước',
@@ -480,7 +535,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   }
 
   Widget _buildModernActivityCard({
-    required String icon,
+    required IconData icon,
     required String title,
     required String subtitle,
     required String time,
@@ -490,12 +545,12 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.2),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
         border: Border.all(
@@ -505,17 +560,32 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       ),
       child: Row(
         children: [
+          // Icon tròn với background
           Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+            width: ResponsiveHelper.getIconSize(context, 50),
+            height: ResponsiveHelper.getIconSize(context, 50),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-            ),
-            child: Text(
-              icon,
-              style: TextStyle(
-                fontSize: ResponsiveHelper.getIconSize(context, 20),
+              gradient: LinearGradient(
+                colors: [
+                  color,
+                  color.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: ResponsiveHelper.getIconSize(context, 24),
+              color: Colors.white,
             ),
           ),
           SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
@@ -551,7 +621,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             ),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+              borderRadius: BorderRadius.circular(15),
             ),
             child: Text(
               time,
@@ -574,14 +644,31 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '⏰ Nhắc nhở sắp tới',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.warning, AppColors.secondary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Nhắc nhở sắp tới',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           Container(
@@ -595,7 +682,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.2),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: AppColors.warning.withOpacity(0.2),
                 width: 1,
@@ -603,15 +690,31 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             ),
             child: Row(
               children: [
+                // Icon tròn với background
                 Container(
-                  padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+                  width: ResponsiveHelper.getIconSize(context, 50),
+                  height: ResponsiveHelper.getIconSize(context, 50),
                   decoration: BoxDecoration(
-                    color: AppColors.warning,
-                    borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.warning,
+                        AppColors.warning.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.warning.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: Icon(
-                    Icons.schedule,
-                    size: ResponsiveHelper.getIconSize(context, 20),
+                    Icons.schedule_rounded,
+                    size: ResponsiveHelper.getIconSize(context, 24),
                     color: Colors.white,
                   ),
                 ),
@@ -641,7 +744,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                   ),
                 ),
                 Icon(
-                  Icons.arrow_forward_ios,
+                  Icons.arrow_forward_ios_rounded,
                   size: ResponsiveHelper.getIconSize(context, 16),
                   color: AppColors.grey,
                 ),

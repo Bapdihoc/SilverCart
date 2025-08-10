@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../network/service/auth_service.dart';
 import '../../injection.dart';
+import 'otp_verification_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -62,42 +62,70 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
+      // Call the actual registration API
       await _authService.register(
         email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        password: _passwordController.text,
         phone: _phoneController.text.trim(),
         fullName: _fullNameController.text.trim(),
-        gender: 'string',
-        address: {
-          'streetAddress': 'string',
-          'wardCode': '510101',
-          'districtId': 1566,
-          'toDistrictName': 'string',
-          'toProvinceName': 'string',
-        },
-        isGuardian: true,
       );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
-            backgroundColor: AppColors.success,
+        
+        // Send OTP after successful registration
+        final otpResult = await _authService.sendOTP(_emailController.text.trim());
+        if (!otpResult.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(otpResult.message ?? 'Không thể gửi OTP'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+        
+        // Navigate to OTP verification page
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpVerificationPage(
+              email: _emailController.text.trim(),
+            ),
           ),
         );
-        context.go('/login/family');
+
+        // If OTP verification successful, show success message
+        if (result == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          context.go('/login/family');
+        }
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
+      
+      // Extract error message
+      String errorMessage = 'Đăng ký thất bại';
+      if (e.toString().contains('Exception:')) {
+        errorMessage = e.toString().split('Exception: ').last;
+      } else {
+        errorMessage = e.toString();
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đăng ký thất bại: ${e.toString()}'),
+          content: Text(errorMessage),
           backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -106,244 +134,195 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => context.pop(),
+        leading: Container(
+          margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.primary,
+              size: ResponsiveHelper.getIconSize(context, 20),
+            ),
+            onPressed: () => context.pop(),
+          ),
         ),
         title: Text(
-          'Đăng ký tài khoản',
+          'Đăng ký',
           style: ResponsiveHelper.responsiveTextStyle(
             context: context,
-            baseSize: 18,
+            baseSize: 20,
+            fontWeight: FontWeight.bold,
             color: AppColors.text,
           ),
         ),
       ),
       body: SafeArea(
-        child: ResponsiveHelper.responsiveContainer(
-          context: context,
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
-                  // Logo
-                  Center(
+                // Form Section
+                Container(
+                  margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
                     child: Column(
                       children: [
-                        Container(
-                          width: ResponsiveHelper.getIconSize(context, 80),
-                          height: ResponsiveHelper.getIconSize(context, 80),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(
-                              ResponsiveHelper.getIconSize(context, 40),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.family_restroom,
-                            size: ResponsiveHelper.getIconSize(context, 40),
-                            color: Colors.white,
-                          ),
+                        // Full Name Field
+                        _buildModernTextField(
+                          controller: _fullNameController,
+                          label: 'Họ và tên',
+                          hint: 'Nhập họ và tên đầy đủ',
+                          icon: Icons.person_rounded,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập họ và tên';
+                            }
+                            return null;
+                          },
                         ),
+
                         SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                        Text(
-                          'Đăng ký tài khoản',
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
+
+                        // Email Field
+                        _buildModernTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          hint: 'Nhập email của bạn',
+                          icon: Icons.email_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập email';
+                            }
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              return 'Email không hợp lệ';
+                            }
+                            return null;
+                          },
                         ),
-                        SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                        Text(
-                          'Người thân quản lý',
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 14,
-                            color: AppColors.grey,
-                          ),
+
+                        SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+
+                        // Phone Field
+                        _buildModernTextField(
+                          controller: _phoneController,
+                          label: 'Số điện thoại',
+                          hint: 'Nhập số điện thoại',
+                          icon: Icons.phone_rounded,
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập số điện thoại';
+                            }
+                            if (!RegExp(r'^[0-9]{10,11}$').hasMatch(value)) {
+                              return 'Số điện thoại không hợp lệ';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+
+                        // Password Field
+                        _buildModernPasswordField(
+                          controller: _passwordController,
+                          label: 'Mật khẩu',
+                          hint: 'Nhập mật khẩu (ít nhất 6 ký tự)',
+                          isVisible: _isPasswordVisible,
+                          onToggle: _togglePasswordVisibility,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng nhập mật khẩu';
+                            }
+                            if (value.length < 6) {
+                              return 'Mật khẩu phải có ít nhất 6 ký tự';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+
+                        // Confirm Password Field
+                        _buildModernPasswordField(
+                          controller: _confirmPasswordController,
+                          label: 'Xác nhận mật khẩu',
+                          hint: 'Nhập lại mật khẩu',
+                          isVisible: _isConfirmPasswordVisible,
+                          onToggle: _toggleConfirmPasswordVisibility,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Vui lòng xác nhận mật khẩu';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Mật khẩu không khớp';
+                            }
+                            return null;
+                          },
                         ),
                       ],
                     ),
                   ),
+                ),
 
-                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-
-                  // Full Name Field
-                  TextFormField(
-                    controller: _fullNameController,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
+                // Register Button
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
                     ),
-                    decoration: ResponsiveHelper.responsiveInputDecoration(
-                      context: context,
-                      labelText: 'Họ và tên',
-                      hintText: 'Nhập họ và tên đầy đủ',
-                      prefixIcon: Icon(
-                        Icons.person_outlined,
-                        size: ResponsiveHelper.getIconSize(context, 20),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
                       ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập họ và tên';
-                      }
-                      return null;
-                    },
+                    ],
                   ),
-
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-                  // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                    ),
-                    decoration: ResponsiveHelper.responsiveInputDecoration(
-                      context: context,
-                      labelText: 'Email',
-                      hintText: 'Nhập email của bạn',
-                      prefixIcon: Icon(
-                        Icons.email_outlined,
-                        size: ResponsiveHelper.getIconSize(context, 20),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập email';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return 'Email không hợp lệ';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-                  // Phone Field
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                    ),
-                    decoration: ResponsiveHelper.responsiveInputDecoration(
-                      context: context,
-                      labelText: 'Số điện thoại',
-                      hintText: 'Nhập số điện thoại',
-                      prefixIcon: Icon(
-                        Icons.phone_outlined,
-                        size: ResponsiveHelper.getIconSize(context, 20),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập số điện thoại';
-                      }
-                      if (!RegExp(r'^[0-9]{10,11}$').hasMatch(value)) {
-                        return 'Số điện thoại không hợp lệ';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                    ),
-                    decoration: ResponsiveHelper.responsiveInputDecoration(
-                      context: context,
-                      labelText: 'Mật khẩu',
-                      hintText: 'Nhập mật khẩu (ít nhất 6 ký tự)',
-                      prefixIcon: Icon(
-                        Icons.lock_outlined,
-                        size: ResponsiveHelper.getIconSize(context, 20),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                          size: ResponsiveHelper.getIconSize(context, 20),
-                        ),
-                        onPressed: _togglePasswordVisibility,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng nhập mật khẩu';
-                      }
-                      if (value.length < 6) {
-                        return 'Mật khẩu phải có ít nhất 6 ký tự';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-                  // Confirm Password Field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: !_isConfirmPasswordVisible,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                    ),
-                    decoration: ResponsiveHelper.responsiveInputDecoration(
-                      context: context,
-                      labelText: 'Xác nhận mật khẩu',
-                      hintText: 'Nhập lại mật khẩu',
-                      prefixIcon: Icon(
-                        Icons.lock_outlined,
-                        size: ResponsiveHelper.getIconSize(context, 20),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                          size: ResponsiveHelper.getIconSize(context, 20),
-                        ),
-                        onPressed: _toggleConfirmPasswordVisibility,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng xác nhận mật khẩu';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Mật khẩu không khớp';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-
-                  // Register Button
-                  ResponsiveHelper.responsiveButton(
-                    context: context,
+                  child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                     child: _isLoading
                         ? SizedBox(
                             width: ResponsiveHelper.getIconSize(context, 24),
@@ -353,21 +332,40 @@ class _RegisterPageState extends State<RegisterPage> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text(
-                            'Đăng ký',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add_rounded,
+                                size: ResponsiveHelper.getIconSize(context, 24),
+                              ),
+                              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                              Text(
+                                'Đăng ký tài khoản',
+                                style: ResponsiveHelper.responsiveTextStyle(
+                                  context: context,
+                                  baseSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                   ),
+                ),
 
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
-                  // Login Link
-                  Row(
+                // Login Link
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
+                  padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  ),
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
@@ -375,15 +373,15 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 16,
-                          color: AppColors.text,
+                          color: AppColors.grey,
                         ),
                       ),
-                      TextButton(
-                        onPressed: () {
+                      GestureDetector(
+                        onTap: () {
                           context.go('/login/family');
                         },
                         child: Text(
-                          'Đăng nhập',
+                          'Đăng nhập ngay',
                           style: ResponsiveHelper.responsiveTextStyle(
                             context: context,
                             baseSize: 16,
@@ -394,14 +392,193 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                     ],
                   ),
+                ),
 
-                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-                ],
-              ),
+                SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+              ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildModernTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 32),
+              height: ResponsiveHelper.getIconSize(context, 32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: ResponsiveHelper.getIconSize(context, 16),
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              label,
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: ResponsiveHelper.getSpacing(context)),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: ResponsiveHelper.responsiveTextStyle(
+            context: context,
+            baseSize: 16,
+            color: AppColors.text,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 16,
+              color: AppColors.grey,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error),
+            ),
+            filled: true,
+            fillColor: Color(0xFFF8F9FA),
+            contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required bool isVisible,
+    required VoidCallback onToggle,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 32),
+              height: ResponsiveHelper.getIconSize(context, 32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.lock_rounded,
+                size: ResponsiveHelper.getIconSize(context, 16),
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              label,
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: ResponsiveHelper.getSpacing(context)),
+        TextFormField(
+          controller: controller,
+          obscureText: !isVisible,
+          style: ResponsiveHelper.responsiveTextStyle(
+            context: context,
+            baseSize: 16,
+            color: AppColors.text,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 16,
+              color: AppColors.grey,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.error),
+            ),
+            filled: true,
+            fillColor: Color(0xFFF8F9FA),
+            contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+            suffixIcon: Container(
+              margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                  size: ResponsiveHelper.getIconSize(context, 20),
+                  color: AppColors.grey,
+                ),
+                onPressed: onToggle,
+              ),
+            ),
+          ),
+          validator: validator,
+        ),
+      ],
     );
   }
 } 

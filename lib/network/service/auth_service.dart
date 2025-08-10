@@ -3,6 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/creating_elder_request.dart';
 import 'package:silvercart/models/login_response.dart';
+import 'package:silvercart/models/user_detail_response.dart';
+import 'package:silvercart/models/user_me_response.dart';
+import 'package:silvercart/models/qr_generate_response.dart';
 import 'package:silvercart/network/repositories/auth/auth_repository.dart';
 
 @LazySingleton()
@@ -12,7 +15,6 @@ class AuthService {
 
   // Storage keys
   static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
   static const String _userRoleKey = 'user_role';
   static const String _expirationKey = 'token_expiration';
@@ -39,18 +41,12 @@ class AuthService {
     required String password,
     required String phone,
     required String fullName,
-    required String gender,
-    required Map<String, dynamic> address,
-    required bool isGuardian,
   }) async {
     await _repo.signUp(
       email: email,
       password: password,
       phone: phone,
       fullName: fullName,
-      gender: gender,
-      address: address,
-      isGuardian: isGuardian,
     );
   }
 
@@ -62,17 +58,39 @@ class AuthService {
     return await _repo.changePassword(oldPassword, newPassword);
   }
 
-  Future<BaseResponse<String>> generateQrLoginToken(String value) async {
-    return await _repo.generateQrLoginToken(value);
+  Future<BaseResponse<QrGenerateResponse>> generateQr(String userId) async {
+    return await _repo.generateQr(userId);
+  }
+
+  Future<BaseResponse<void>> sendOTP(String emailOrPhone) async {
+    return await _repo.sendOTP(emailOrPhone);
+  }
+
+  Future<BaseResponse<void>> verifyOTP(String otpCode) async {
+    return await _repo.verifyOTP(otpCode);
+  }
+
+  Future<BaseResponse<UserDetailResponse>> getUserDetail(String id) async {
+    return await _repo.getUserDetail(id);
+  }
+
+  Future<BaseResponse<UserMeResponse>> getMe() async {
+    return await _repo.getMe();
   }
   // Save login data to SharedPreferences
   Future<void> _saveLoginData(LoginResponse loginData) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_accessTokenKey, loginData.accessToken);
-    await prefs.setString(_refreshTokenKey, loginData.refreshToken);
-    await prefs.setString(_userIdKey, loginData.userId);
-    await prefs.setString(_userRoleKey, loginData.role);
-    await prefs.setString(_expirationKey, loginData.expiration.toIso8601String());
+    await prefs.setString(_accessTokenKey, loginData.data); // JWT token
+    await prefs.setString(_userIdKey, loginData.getUserId() ?? '');
+    await prefs.setString(_userRoleKey, loginData.getRole() ?? '');
+    await prefs.setString(_expirationKey, loginData.getExpiration()?.toIso8601String() ?? '');
+    
+    // Debug logging
+    print('💾 AuthService: Token saved successfully');
+    print('💾 AuthService: Token preview: ${loginData.data.substring(0, 20)}...');
+    print('💾 AuthService: User ID: ${loginData.getUserId()}');
+    print('💾 AuthService: Role: ${loginData.getRole()}');
+    print('💾 AuthService: Expiration: ${loginData.getExpiration()}');
   }
 
   // Get access token
@@ -81,11 +99,7 @@ class AuthService {
     return prefs.getString(_accessTokenKey);
   }
 
-  // Get refresh token
-  Future<String?> getRefreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_refreshTokenKey);
-  }
+
 
   // Get user ID
   Future<String?> getUserId() async {
@@ -117,7 +131,6 @@ class AuthService {
   Future<void> _clearLoginData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userRoleKey);
     await prefs.remove(_expirationKey);
@@ -130,7 +143,6 @@ class AuthService {
       'userId': prefs.getString(_userIdKey),
       'role': prefs.getString(_userRoleKey),
       'accessToken': prefs.getString(_accessTokenKey),
-      'refreshToken': prefs.getString(_refreshTokenKey),
     };
   }
 

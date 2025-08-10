@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class ResponsiveHelper {
   static bool isMobile(BuildContext context) =>
@@ -316,6 +317,212 @@ class ResponsiveHelper {
       fontSize: getFontSize(context, baseSize),
       fontWeight: fontWeight,
       color: color,
+    );
+  }
+
+  // ===== ELDERLY-FRIENDLY HELPERS =====
+  
+  // Font size lớn hơn cho người cao tuổi
+  static double getElderlyFontSize(BuildContext context, double baseSize) {
+    double screenWidth = getScreenWidth(context);
+    double fontSize;
+    
+    if (isMobile(context)) {
+      fontSize = baseSize * 1.3 * (screenWidth / 375); // Tăng 30% so với bình thường
+      return _clamp(fontSize, baseSize * 1.1, baseSize * 1.6);
+    } else if (isTablet(context)) {
+      fontSize = baseSize * 1.2 * (screenWidth / 768);
+      return _clamp(fontSize, baseSize * 1.0, baseSize * 1.5);
+    } else {
+      fontSize = baseSize * 1.1 * (screenWidth / 1024);
+      return _clamp(fontSize, baseSize * 1.0, baseSize * 1.4);
+    }
+  }
+
+  // Icon size lớn hơn cho người cao tuổi
+  static double getElderlyIconSize(BuildContext context, double baseSize) {
+    double screenWidth = getScreenWidth(context);
+    double iconSize;
+    
+    if (isMobile(context)) {
+      iconSize = baseSize * 1.4 * (screenWidth / 375); // Tăng 40% so với bình thường
+      return _clamp(iconSize, baseSize * 1.2, baseSize * 1.8);
+    } else if (isTablet(context)) {
+      iconSize = baseSize * 1.3 * (screenWidth / 768);
+      return _clamp(iconSize, baseSize * 1.1, baseSize * 1.6);
+    } else {
+      iconSize = baseSize * 1.2 * (screenWidth / 1024);
+      return _clamp(iconSize, baseSize * 1.0, baseSize * 1.5);
+    }
+  }
+
+  // Button height lớn hơn cho người cao tuổi
+  static double getElderlyButtonHeight(BuildContext context) {
+    double screenHeight = getScreenHeight(context);
+    double height;
+    if (isMobile(context)) {
+      height = screenHeight * 0.08; // Tăng từ 6% lên 8%
+      return _clamp(height, 56.0, 72.0);
+    } else if (isTablet(context)) {
+      height = screenHeight * 0.075; // Tăng từ 5.5% lên 7.5%
+      return _clamp(height, 60.0, 76.0);
+    } else {
+      height = screenHeight * 0.07; // Tăng từ 5% lên 7%
+      return _clamp(height, 64.0, 80.0);
+    }
+  }
+
+  // Input height lớn hơn cho người cao tuổi
+  static double getElderlyInputHeight(BuildContext context) {
+    double screenHeight = getScreenHeight(context);
+    double height;
+    if (isMobile(context)) {
+      height = screenHeight * 0.08; // Tăng từ 6% lên 8%
+      return _clamp(height, 56.0, 72.0);
+    } else if (isTablet(context)) {
+      height = screenHeight * 0.075; // Tăng từ 5.5% lên 7.5%
+      return _clamp(height, 60.0, 76.0);
+    } else {
+      height = screenHeight * 0.07; // Tăng từ 5% lên 7%
+      return _clamp(height, 64.0, 80.0);
+    }
+  }
+
+  // Padding lớn hơn cho người cao tuổi
+  static double getElderlyPadding(BuildContext context) {
+    double screenWidth = getScreenWidth(context);
+    double padding;
+    if (isMobile(context)) {
+      padding = screenWidth * 0.06; // Tăng từ 4% lên 6%
+      return _clamp(padding, 16.0, 32.0);
+    } else if (isTablet(context)) {
+      padding = screenWidth * 0.04; // Tăng từ 2.5% lên 4%
+      return _clamp(padding, 20.0, 40.0);
+    } else {
+      padding = screenWidth * 0.03; // Tăng từ 2% lên 3%
+      return _clamp(padding, 24.0, 48.0);
+    }
+  }
+
+  // Spacing lớn hơn cho người cao tuổi
+  static double getElderlySpacing(BuildContext context) {
+    double screenWidth = getScreenWidth(context);
+    double spacing;
+    if (isMobile(context)) {
+      spacing = screenWidth * 0.03; // Tăng từ 2% lên 3%
+      return _clamp(spacing, 12.0, 24.0);
+    } else if (isTablet(context)) {
+      spacing = screenWidth * 0.025; // Tăng từ 1.5% lên 2.5%
+      return _clamp(spacing, 14.0, 28.0);
+    } else {
+      spacing = screenWidth * 0.02; // Tăng từ 1% lên 2%
+      return _clamp(spacing, 16.0, 32.0);
+    }
+  }
+
+  // Border radius lớn hơn cho người cao tuổi
+  static double getElderlyBorderRadius(BuildContext context) {
+    double screenWidth = getScreenWidth(context);
+    double radius;
+    if (isMobile(context)) {
+      radius = screenWidth * 0.03; // Tăng từ 2% lên 3%
+      return _clamp(radius, 8.0, 16.0);
+    } else if (isTablet(context)) {
+      radius = screenWidth * 0.025; // Tăng từ 1.5% lên 2.5%
+      return _clamp(radius, 10.0, 20.0);
+    } else {
+      radius = screenWidth * 0.02; // Tăng từ 1.2% lên 2%
+      return _clamp(radius, 12.0, 24.0);
+    }
+  }
+
+  // Text style cho người cao tuổi
+  static TextStyle elderlyTextStyle({
+    required BuildContext context,
+    required double baseSize,
+    FontWeight? fontWeight,
+    Color? color,
+  }) {
+    return TextStyle(
+      fontSize: getElderlyFontSize(context, baseSize),
+      fontWeight: fontWeight,
+      color: color,
+      height: 1.4, // Tăng line height để dễ đọc
+    );
+  }
+
+  // Button style cho người cao tuổi
+  static Widget elderlyButton({
+    required BuildContext context,
+    required VoidCallback? onPressed,
+    required Widget child,
+    Color? backgroundColor,
+    Color? foregroundColor,
+    double? height,
+  }) {
+    return SizedBox(
+      height: height ?? getElderlyButtonHeight(context),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(getElderlyBorderRadius(context)),
+          ),
+          elevation: 4, // Tăng elevation để dễ nhìn
+          padding: EdgeInsets.symmetric(
+            horizontal: getElderlyPadding(context),
+            vertical: getElderlySpacing(context),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  // Input decoration cho người cao tuổi
+  static InputDecoration elderlyInputDecoration({
+    required BuildContext context,
+    required String labelText,
+    String? hintText,
+    Widget? prefixIcon,
+    Widget? suffixIcon,
+    Color? fillColor,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: prefixIcon,
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(getElderlyBorderRadius(context)),
+        borderSide: BorderSide(width: 2), // Tăng độ dày border
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(getElderlyBorderRadius(context)),
+        borderSide: BorderSide(width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(getElderlyBorderRadius(context)),
+        borderSide: BorderSide(width: 3), // Tăng độ dày khi focus
+      ),
+      labelStyle: elderlyTextStyle(
+        context: context,
+        baseSize: 16,
+        color: AppColors.elderlyTextSecondary,
+      ),
+      hintStyle: elderlyTextStyle(
+        context: context,
+        baseSize: 16,
+        color: AppColors.elderlyTextSecondary,
+      ),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: getElderlyPadding(context),
+        vertical: getElderlySpacing(context),
+      ),
+      filled: true,
+      fillColor: fillColor ?? AppColors.elderlyCardBackground,
     );
   }
 } 
