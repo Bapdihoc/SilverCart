@@ -29,6 +29,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
   bool _isAudioMuted = false;
   bool _isVideoMuted = false;
   bool _isConnecting = false;
+  bool _isSpeaking = false;
   
   @override
   void initState() {
@@ -36,7 +37,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     _initializeAgora();
     
     // Set default channel name
-    _channelController.text = 'support_${DateTime.now().millisecondsSinceEpoch}';
+    _channelController.text = 'test_phat';
   }
   
   @override
@@ -93,6 +94,16 @@ class _VideoCallPageState extends State<VideoCallPage> {
         setState(() {
           _isConnecting = false;
         });
+      },
+      onAudioVolumeIndication: (RtcConnection connection, List<AudioVolumeInfo> speakers, int speakerNumber, int totalVolume) {
+        for (AudioVolumeInfo speaker in speakers) {
+          if (speaker.uid == 0) { // Local user
+            setState(() {
+              _isSpeaking = speaker.volume! > 5; // Threshold for speaking detection
+            });
+            break;
+          }
+        }
       },
     ));
   }
@@ -563,11 +574,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Audio toggle
+              // Audio toggle with speaking indicator
               _buildControlButton(
-                icon: _isAudioMuted ? Icons.mic_off : Icons.mic,
+                icon: _isAudioMuted ? Icons.mic_off : (_isSpeaking ? Icons.mic : Icons.mic),
                 isActive: !_isAudioMuted,
                 onPressed: _toggleAudio,
+                showSpeakingIndicator: _isSpeaking && !_isAudioMuted,
               ),
               
               // Video toggle
@@ -603,6 +615,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     required bool isActive,
     required VoidCallback onPressed,
     Color? backgroundColor,
+    bool showSpeakingIndicator = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -615,16 +628,38 @@ class _VideoCallPageState extends State<VideoCallPage> {
             offset: const Offset(0, 2),
           ),
         ],
+        // Speaking indicator border
+        border: showSpeakingIndicator 
+            ? Border.all(color: AppColors.success, width: 3)
+            : null,
       ),
-      child: IconButton(
-        icon: Icon(
-          icon,
-          color: backgroundColor != null 
-              ? Colors.white 
-              : (isActive ? AppColors.text : Colors.white),
-          size: ResponsiveHelper.getIconSize(context, 24),
-        ),
-        onPressed: onPressed,
+      child: Stack(
+        children: [
+          IconButton(
+            icon: Icon(
+              icon,
+              color: backgroundColor != null 
+                  ? Colors.white 
+                  : (isActive ? AppColors.text : Colors.white),
+              size: ResponsiveHelper.getIconSize(context, 24),
+            ),
+            onPressed: onPressed,
+          ),
+          // Speaking pulse indicator
+          if (showSpeakingIndicator)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: AppColors.success,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

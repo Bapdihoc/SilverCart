@@ -7,6 +7,7 @@ class ElderlyProductListPage extends StatefulWidget {
   final String categorySubtitle;
   final Color categoryColor;
   final IconData categoryIcon;
+  final String? categoryId;
 
   const ElderlyProductListPage({
     super.key,
@@ -14,6 +15,7 @@ class ElderlyProductListPage extends StatefulWidget {
     required this.categorySubtitle,
     required this.categoryColor,
     required this.categoryIcon,
+    this.categoryId,
   });
 
   @override

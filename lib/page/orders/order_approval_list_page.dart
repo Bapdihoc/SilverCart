@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/responsive_helper.dart';
+import '../../models/elder_carts_response.dart';
+import '../../network/service/cart_service.dart';
+import '../../injection.dart';
 import 'order_detail_page.dart';
 
 class OrderApprovalListPage extends StatefulWidget {
@@ -14,76 +15,58 @@ class OrderApprovalListPage extends StatefulWidget {
 class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
+  late final CartService _cartService;
+  
   String _selectedElderlyFilter = 'Tất cả';
   String _selectedSortOption = 'Mới nhất';
   String _searchQuery = '';
-
-  final List<String> _elderlyOptions = [
-    'Tất cả',
-    'Bà Lan (79 tuổi)',
-    'Ông Minh (82 tuổi)',
-    'Bà Thu (75 tuổi)'
-  ];
+  
+  List<ElderCartData> _allCarts = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
   final List<String> _sortOptions = ['Mới nhất', 'Cũ nhất', 'Giá thấp', 'Giá cao'];
 
-  // Mock data for orders
-  final List<Map<String, dynamic>> _allOrders = [
-    {
-      'id': 'ORD001',
-      'elderlyName': 'Bà Lan',
-      'elderlyAge': 79,
-      'createdAt': DateTime.now().subtract(const Duration(hours: 2)),
-      'totalAmount': 450000,
-      'itemCount': 5,
-      'status': 'pending',
-      'urgency': 'high',
-      'items': [
-        {'name': 'Thuốc huyết áp', 'quantity': 2, 'price': 150000},
-        {'name': 'Vitamin D3', 'quantity': 1, 'price': 200000},
-        {'name': 'Cháo ăn liền', 'quantity': 10, 'price': 100000},
-      ],
-      'address': '123 Đường ABC, Quận 1, TP.HCM',
-      'note': 'Cần gấp thuốc huyết áp'
-    },
-    {
-      'id': 'ORD002',
-      'elderlyName': 'Ông Minh',
-      'elderlyAge': 82,
-      'createdAt': DateTime.now().subtract(const Duration(hours: 5)),
-      'totalAmount': 280000,
-      'itemCount': 3,
-      'status': 'pending',
-      'urgency': 'medium',
-      'items': [
-        {'name': 'Sữa ensure', 'quantity': 2, 'price': 180000},
-        {'name': 'Bánh quy dinh dưỡng', 'quantity': 5, 'price': 100000},
-      ],
-      'address': '456 Đường XYZ, Quận 3, TP.HCM',
-      'note': ''
-    },
-    {
-      'id': 'ORD003',
-      'elderlyName': 'Bà Thu',
-      'elderlyAge': 75,
-      'createdAt': DateTime.now().subtract(const Duration(days: 1)),
-      'totalAmount': 320000,
-      'itemCount': 4,
-      'status': 'pending',
-      'urgency': 'low',
-      'items': [
-        {'name': 'Mật ong rừng', 'quantity': 1, 'price': 220000},
-        {'name': 'Trà gừng', 'quantity': 3, 'price': 100000},
-      ],
-      'address': '789 Đường DEF, Quận 7, TP.HCM',
-      'note': 'Giao vào cuối tuần'
-    },
-  ];
+  // Dynamic elderly options based on loaded data
+  List<String> get _elderlyOptions {
+    final elderNames = _allCarts.map((cart) => cart.elderName).toSet().toList();
+    return ['Tất cả', ...elderNames];
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _cartService = getIt<CartService>();
+    _loadElderCarts();
+  }
+
+  Future<void> _loadElderCarts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _cartService.getAllElderCarts();
+      
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _allCarts = result.data!.data;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = result.message ?? 'Không thể tải danh sách đơn hàng';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi tải dữ liệu: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -92,29 +75,31 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get _filteredOrders {
-    var filtered = _allOrders.where((order) {
+  List<ElderCartData> get _filteredCarts {
+    var filtered = _allCarts.where((cart) {
       bool matchesElderly = _selectedElderlyFilter == 'Tất cả' ||
-          order['elderlyName'].contains(_selectedElderlyFilter.split(' ')[0]);
+          cart.elderName.contains(_selectedElderlyFilter);
       bool matchesSearch = _searchQuery.isEmpty ||
-          order['elderlyName'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          order['id'].toLowerCase().contains(_searchQuery.toLowerCase());
+          cart.elderName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          cart.cartId.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          cart.customerName.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesElderly && matchesSearch;
     }).toList();
 
     // Sort
     switch (_selectedSortOption) {
       case 'Mới nhất':
-        filtered.sort((a, b) => b['createdAt'].compareTo(a['createdAt']));
+        // Since we don't have createdAt from API, sort by cartId (newer IDs typically come first)
+        filtered.sort((a, b) => b.cartId.compareTo(a.cartId));
         break;
       case 'Cũ nhất':
-        filtered.sort((a, b) => a['createdAt'].compareTo(b['createdAt']));
+        filtered.sort((a, b) => a.cartId.compareTo(b.cartId));
         break;
       case 'Giá thấp':
-        filtered.sort((a, b) => a['totalAmount'].compareTo(b['totalAmount']));
+        filtered.sort((a, b) => a.totalAmount.compareTo(b.totalAmount));
         break;
       case 'Giá cao':
-        filtered.sort((a, b) => b['totalAmount'].compareTo(a['totalAmount']));
+        filtered.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
         break;
     }
 
@@ -200,13 +185,89 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: _isLoading
+          ? _buildLoadingState()
+          : _errorMessage != null
+              ? _buildErrorState()
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildOrdersList('Pending'),
+                    _buildOrdersList('Approve'),
+                    _buildOrdersList('Reject'),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildOrdersList('pending'),
-          _buildOrdersList('approved'),
-          _buildOrdersList('rejected'),
+          CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Đang tải danh sách đơn hàng...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Không thể tải danh sách đơn hàng',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Đã xảy ra lỗi không xác định',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadElderCarts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -244,16 +305,16 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
   }
 
   Widget _buildOrdersList(String status) {
-    final orders = _filteredOrders.where((order) => order['status'] == status).toList();
+    final carts = _filteredCarts.where((cart) => cart.status.toLowerCase() == status.toLowerCase()).toList();
 
-    if (orders.isEmpty) {
+    if (carts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               status == 'pending' ? Icons.inbox :
-              status == 'approved' ? Icons.check_circle :
+              status == 'approve' ? Icons.check_circle :
               Icons.cancel,
               size: 64,
               color: Colors.grey[400],
@@ -261,7 +322,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
             const SizedBox(height: 16),
             Text(
               status == 'pending' ? 'Không có đơn hàng chờ duyệt' :
-              status == 'approved' ? 'Chưa có đơn hàng được duyệt' :
+              status == 'approve' ? 'Chưa có đơn hàng được duyệt' :
               'Chưa có đơn hàng bị từ chối',
               style: TextStyle(
                 fontSize: 16,
@@ -274,26 +335,30 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        final order = orders[index];
-        return _buildOrderCard(order);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadElderCarts,
+      color: AppColors.primary,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: carts.length,
+        itemBuilder: (context, index) {
+          final cart = carts[index];
+          return _buildOrderCard(cart);
+        },
+      ),
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
-    final urgencyColor = order['urgency'] == 'high' ? Colors.red[100] :
-                        order['urgency'] == 'medium' ? Colors.orange[100] :
-                        Colors.green[100];
-    final urgencyTextColor = order['urgency'] == 'high' ? Colors.red[700] :
-                            order['urgency'] == 'medium' ? Colors.orange[700] :
-                            Colors.green[700];
-    final urgencyText = order['urgency'] == 'high' ? 'Khẩn cấp' :
-                       order['urgency'] == 'medium' ? 'Bình thường' :
-                       'Không gấp';
+  Widget _buildOrderCard(ElderCartData cart) {
+    // Status-based colors
+    final statusColor = cart.statusColor == 'red' ? Colors.red[100] :
+                       cart.statusColor == 'orange' ? Colors.orange[100] :
+                       cart.statusColor == 'green' ? Colors.green[100] :
+                       Colors.blue[100];
+    final statusTextColor = cart.statusColor == 'red' ? Colors.red[700] :
+                           cart.statusColor == 'orange' ? Colors.orange[700] :
+                           cart.statusColor == 'green' ? Colors.green[700] :
+                           Colors.blue[700];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -308,14 +373,29 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
           ),
         ],
       ),
-      child: InkWell(
+              child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderDetailPage(order: order),
-            ),
-          );
+          // Convert cart to order format for OrderDetailPage
+          final orderData = {
+            'id': cart.cartId,
+            'elderlyName': cart.elderName,
+            'customerName': cart.customerName,
+            'totalAmount': cart.totalAmount,
+            'itemCount': cart.itemCount,
+            'status': cart.status.toLowerCase(),
+            'items': cart.items.map((item) => {
+              'name': item.productName,
+              'quantity': item.quantity,
+              'price': item.productPrice,
+            }).toList(),
+          };
+          
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (context) => OrderDetailPage(order: orderData),
+          //   ),
+          // );
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -329,13 +409,13 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: urgencyColor,
+                      color: statusColor,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      urgencyText,
+                      cart.statusText,
                       style: TextStyle(
-                        color: urgencyTextColor,
+                        color: statusTextColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -343,7 +423,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                   ),
                   const Spacer(),
                   Text(
-                    order['id'],
+                    cart.cartId.substring(0, 8),
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 12,
@@ -358,26 +438,30 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                 children: [
                   const Icon(Icons.person, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    '${order['elderlyName']} (${order['elderlyAge']} tuổi)',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      cart.elderName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              // Time
+              // Customer info
               Row(
                 children: [
-                  const Icon(Icons.access_time, color: Colors.grey, size: 16),
+                  const Icon(Icons.family_restroom, color: Colors.grey, size: 16),
                   const SizedBox(width: 8),
-                  Text(
-                    _formatTime(order['createdAt']),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
+                  Expanded(
+                    child: Text(
+                      'Người thân: ${cart.customerName}',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -395,7 +479,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                     Icon(Icons.shopping_bag, color: Colors.grey[600], size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '${order['itemCount']} sản phẩm',
+                      '${cart.itemCount} sản phẩm',
                       style: TextStyle(
                         color: Colors.grey[700],
                         fontSize: 14,
@@ -403,7 +487,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                     ),
                     const Spacer(),
                     Text(
-                      '${(order['totalAmount'] as int).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}đ',
+                      '${cart.totalAmount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}đ',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -413,39 +497,15 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                   ],
                 ),
               ),
-              if (order['note'].isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.note, color: Colors.blue, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          order['note'],
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.blue,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              if (order['status'] == 'pending') ...[
+              
+              // Action buttons for pending status
+              if (cart.status.toLowerCase() == 'pending') ...[
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _showRejectDialog(order),
+                        onPressed: () => _showRejectDialog(cart),
                         icon: const Icon(Icons.close, size: 18),
                         label: const Text('Từ chối'),
                         style: OutlinedButton.styleFrom(
@@ -458,7 +518,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _approveOrder(order),
+                        onPressed: () => _approveCart(cart),
                         icon: const Icon(Icons.check, size: 18),
                         label: const Text('Duyệt'),
                         style: ElevatedButton.styleFrom(
@@ -478,34 +538,56 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     );
   }
 
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} phút trước';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} giờ trước';
-    } else {
-      return '${difference.inDays} ngày trước';
+  Future<void> _approveCart(ElderCartData cart) async {
+    try {
+      // Call API to change cart status to 'Approve' (status = 2)
+      final result = await _cartService.changeCartStatus(cart.cartId, 2);
+      
+      if (result.isSuccess) {
+        // Update local data
+        setState(() {
+          final index = _allCarts.indexWhere((c) => c.cartId == cart.cartId);
+          if (index != -1) {
+            _allCarts[index] = ElderCartData(
+              cartId: cart.cartId,
+              customerId: cart.customerId,
+              customerName: cart.customerName,
+              elderId: cart.elderId,
+              elderName: cart.elderName,
+              status: 'Approve',
+              items: cart.items,
+            );
+          }
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã duyệt đơn hàng ${cart.cartId.substring(0, 8)} ✅'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Không thể duyệt đơn hàng'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
-  void _approveOrder(Map<String, dynamic> order) {
-    setState(() {
-      order['status'] = 'approved';
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Đã duyệt đơn hàng ${order['id']} ✅'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showRejectDialog(Map<String, dynamic> order) {
+  void _showRejectDialog(ElderCartData cart) {
     final reasonController = TextEditingController();
     
     showDialog(
@@ -516,7 +598,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Bạn có chắc muốn từ chối đơn hàng ${order['id']}?'),
+            Text('Bạn có chắc muốn từ chối đơn hàng ${cart.cartId.substring(0, 8)}?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -534,26 +616,64 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                order['status'] = 'rejected';
-                order['rejectReason'] = reasonController.text;
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Đã từ chối đơn hàng ${order['id']} ❌'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onPressed: () => _rejectCart(cart, reasonController.text),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Từ chối', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _rejectCart(ElderCartData cart, String reason) async {
+    Navigator.pop(context); // Close dialog first
+    
+    try {
+      // Call API to change cart status to 'Reject' (status = 3)
+      final result = await _cartService.changeCartStatus(cart.cartId, 3);
+      
+      if (result.isSuccess) {
+        // Update local data
+        setState(() {
+          final index = _allCarts.indexWhere((c) => c.cartId == cart.cartId);
+          if (index != -1) {
+            _allCarts[index] = ElderCartData(
+              cartId: cart.cartId,
+              customerId: cart.customerId,
+              customerName: cart.customerName,
+              elderId: cart.elderId,
+              elderName: cart.elderName,
+              status: 'Reject',
+              items: cart.items,
+            );
+          }
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã từ chối đơn hàng ${cart.cartId.substring(0, 8)} ❌'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Không thể từ chối đơn hàng'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 

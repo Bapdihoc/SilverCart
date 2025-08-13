@@ -1,11 +1,18 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/cart_get_response.dart';
 import '../../models/cart_replace_request.dart';
+import '../../models/user_detail_response.dart';
+import '../../models/elder_list_response.dart';
 import '../../network/service/cart_service.dart';
+import '../../network/service/auth_service.dart';
+import '../../network/service/elder_service.dart';
+import '../../network/service/order_service.dart';
+import '../../models/create_order_request.dart';
 import '../../injection.dart';
 
 class ShoppingCartPage extends StatefulWidget {
@@ -17,8 +24,8 @@ class ShoppingCartPage extends StatefulWidget {
 
 class _ShoppingCartPageState extends State<ShoppingCartPage> {
   int _currentStep = 0;
-  String _selectedAddress = '🏠 Nhà riêng - 123 Đường ABC, Quận 1';
-  String _selectedElderly = 'Bà Nguyễn Thị A';
+  String? _selectedAddressId;
+  String? _selectedElderlyId;
   String _paymentMethod = 'COD';
   String _note = '';
   
@@ -27,6 +34,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   bool _isLoading = true;
   String? _errorMessage;
   late final CartService _cartService;
+  late final AuthService _authService;
+  late final ElderService _elderService;
+  late final OrderService _orderService;
+  
+  // Address and elderly data
+  List<UserDetailAddress> _userAddresses = [];
+  List<ElderData> _elderlyList = [];
+  Map<String, List<ElderAddressData>> _elderlyAddresses = {};
+  bool _isLoadingAddresses = false;
+  String? _addressErrorMessage;
   
     // Convert API data to UI format
   List<Map<String, dynamic>> get _cartItems {
@@ -38,7 +55,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       'emoji': _getProductEmoji(item.productName),
       'price': item.productPrice,
       'quantity': item.quantity,
-      'elderly': _selectedElderly,
+      'elderly': _getSelectedElderlyName(),
       'imageUrl': item.imageUrl,
     }).toList();
   }
@@ -61,23 +78,83 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return '📦'; // Default emoji
   }
 
-  final List<String> _addresses = [
-    '🏠 Nhà riêng - 123 Đường ABC, Quận 1',
-    '🏢 Chung cư - 456 Tòa nhà DEF, Quận 3',
-    '🏢 Văn phòng - 789 Tòa nhà GHI, Quận 7',
-  ];
+  // Helper methods for getting selected data
+  String _getSelectedElderlyName() {
+    if (_selectedElderlyId == null) return 'Chọn người nhận';
+    final elder = _elderlyList.firstWhere(
+      (elder) => elder.id == _selectedElderlyId,
+      orElse: () => ElderData(
+        id: '',
+        fullName: 'Không xác định',
+        userName: '',
+        birthDate: DateTime.now(),
+        spendLimit: 0,
+        emergencyPhoneNumber: '',
+        relationShip: '',
+        isDelete: false,
+        gender: 0,
+        addresses: [],
+        categories: [],
+      ),
+    );
+    return elder.fullName;
+  }
+  
+  String _getSelectedAddressText() {
+    if (_selectedAddressId == null) return 'Chọn địa chỉ giao hàng';
+    
+    // Check user addresses first
+    for (final address in _userAddresses) {
+      if (address.id == _selectedAddressId) {
+        return '🏠 ${address.streetAddress}, ${address.wardName}, ${address.districtName}, ${address.provinceName}';
+      }
+    }
+    
+    // Check elderly addresses with owner info
+    for (final entry in _elderlyAddresses.entries) {
+      final elderId = entry.key;
+      final addresses = entry.value;
+      
+      for (final address in addresses) {
+        if (address.id == _selectedAddressId) {
+          final elder = _elderlyList.firstWhere((e) => e.id == elderId);
+          return '👤 ${elder.fullName}\n🏠 ${address.streetAddress}, ${address.wardName}, ${address.districtName}, ${address.provinceName}';
+        }
+      }
+    }
+    
+    return 'Địa chỉ không tìm thấy';
+  }
 
-  final List<String> _elderlyList = [
-    'Bà Nguyễn Thị A',
-    'Ông Trần Văn B',
-    'Bà Lê Thị C'
-  ];
+  void _updateAddressForSelectedElderly() {
+    if (_selectedElderlyId == null) return;
+    
+    // Check if selected elderly has addresses
+    final elderlyAddresses = _elderlyAddresses[_selectedElderlyId];
+    
+    if (elderlyAddresses != null && elderlyAddresses.isNotEmpty) {
+      // Auto-select first address of the selected elderly
+      _selectedAddressId = elderlyAddresses.first.id;
+    } else {
+      // Fallback to user's first address if elderly has no address
+      if (_userAddresses.isNotEmpty) {
+        _selectedAddressId = _userAddresses.first.id;
+      } else {
+        // No addresses available
+        _selectedAddressId = null;
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _cartService = getIt<CartService>();
+    _authService = getIt<AuthService>();
+    _elderService = getIt<ElderService>();
+    _orderService = getIt<OrderService>();
     _loadCartData();
+    _loadAddressData();
   }
 
   Future<void> _loadCartData() async {
@@ -105,6 +182,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       if (result.isSuccess && result.data != null) {
         setState(() {
           _cartData = result.data!.data;
+          log('Test Cart: ${_cartData?.cartId}');
           _isLoading = false;
         });
       } else {
@@ -117,6 +195,80 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       setState(() {
         _errorMessage = 'Lỗi tải giỏ hàng: ${e.toString()}';
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadAddressData() async {
+    setState(() {
+      _isLoadingAddresses = true;
+      _addressErrorMessage = null;
+    });
+
+    try {
+      // Get current user ID
+      final userId = await _authService.getUserId();
+      if (userId == null) {
+        setState(() {
+          _addressErrorMessage = 'Vui lòng đăng nhập để xem địa chỉ';
+          _isLoadingAddresses = false;
+        });
+        return;
+      }
+
+      // Load user addresses and elderly data in parallel
+      final userDetailResult = _authService.getUserDetail(userId);
+      final elderlyResult = _elderService.getMyElders();
+      
+      final results = await Future.wait([userDetailResult, elderlyResult]);
+      final userDetailResponse = results[0];
+      final elderlyResponse = results[1];
+
+      if (userDetailResponse.isSuccess && userDetailResponse.data != null) {
+        final userData = userDetailResponse.data as UserDetailResponse;
+        _userAddresses = userData.data.addresses;
+      }
+
+      if (elderlyResponse.isSuccess && elderlyResponse.data != null) {
+        final elderlyData = elderlyResponse.data as ElderListResponse;
+        _elderlyList = elderlyData.data;
+        
+        // Extract addresses from each elderly
+        _elderlyAddresses.clear();
+        for (final elder in _elderlyList) {
+          if (elder.addresses.isNotEmpty) {
+            _elderlyAddresses[elder.id] = elder.addresses;
+          }
+        }
+        
+        // Set default elderly selection if available
+        if (_elderlyList.isNotEmpty && _selectedElderlyId == null) {
+          _selectedElderlyId = _elderlyList.first.id;
+        }
+      }
+
+      // Update address based on selected elderly, or set default
+      if (_selectedElderlyId != null) {
+        _updateAddressForSelectedElderly();
+      } else {
+        // Set default address selection if no elderly selected
+        if (_userAddresses.isNotEmpty && _selectedAddressId == null) {
+          _selectedAddressId = _userAddresses.first.id;
+        } else if (_elderlyAddresses.isNotEmpty && _selectedAddressId == null) {
+          final firstElderlyAddresses = _elderlyAddresses.values.first;
+          if (firstElderlyAddresses.isNotEmpty) {
+            _selectedAddressId = firstElderlyAddresses.first.id;
+          }
+        }
+      }
+
+      setState(() {
+        _isLoadingAddresses = false;
+      });
+    } catch (e) {
+      setState(() {
+        _addressErrorMessage = 'Lỗi tải địa chỉ: ${e.toString()}';
+        _isLoadingAddresses = false;
       });
     }
   }
@@ -417,14 +569,14 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               borderRadius: BorderRadius.circular(50),
             ),
             child: Icon(
-              Icons.error_outline,
+              Icons.shopping_bag_rounded,
               size: ResponsiveHelper.getIconSize(context, 50),
               color: AppColors.error,
             ),
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           Text(
-            'Không thể tải giỏ hàng',
+            'Giỏ hàng trống',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 20,
@@ -434,7 +586,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           Text(
-            _errorMessage ?? 'Đã xảy ra lỗi không xác định',
+            'Mua sắm ngay để có những sản phẩm tốt nhất cho người thân',
+            // _errorMessage ?? 'Đã xảy ra lỗi không xác định',
             textAlign: TextAlign.center,
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
@@ -458,7 +611,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
               ],
             ),
             child: ElevatedButton(
-              onPressed: _loadCartData,
+              onPressed: () => Navigator.of(context).pushNamed('/home'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
@@ -477,7 +630,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   Icon(Icons.refresh_rounded, size: 20),
                   SizedBox(width: ResponsiveHelper.getSpacing(context)),
                   Text(
-                    'Thử lại',
+                    'Mua sắm ngay',
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 16,
@@ -1050,48 +1203,72 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           SizedBox(
             height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _elderlyList.length,
-              separatorBuilder: (context, index) => SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              itemBuilder: (context, index) {
-                final elderly = _elderlyList[index];
-                bool isSelected = _selectedElderly == elderly;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedElderly = elderly;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ResponsiveHelper.getSpacing(context),
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.secondary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isSelected ? AppColors.secondary : AppColors.grey.withOpacity(0.3),
-                        width: 1,
+            child: _isLoadingAddresses
+                ? Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.secondary,
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        elderly,
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 12,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? Colors.white : AppColors.text,
+                  )
+                : _elderlyList.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Không có người thân nào',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 12,
+                            color: AppColors.grey,
+                          ),
                         ),
+                      )
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _elderlyList.length,
+                        separatorBuilder: (context, index) => SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                        itemBuilder: (context, index) {
+                          final elderly = _elderlyList[index];
+                          bool isSelected = _selectedElderlyId == elderly.id;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedElderlyId = elderly.id;
+                                // Auto-select address for the selected elderly
+                                _updateAddressForSelectedElderly();
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ResponsiveHelper.getSpacing(context),
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.secondary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: isSelected ? AppColors.secondary : AppColors.grey.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  elderly.fullName,
+                                  style: ResponsiveHelper.responsiveTextStyle(
+                                    context: context,
+                                    baseSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                    color: isSelected ? Colors.white : AppColors.text,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -1147,12 +1324,16 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Text(
-                  _selectedAddress,
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 12,
-                    color: AppColors.grey,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    _getSelectedAddressText(),
+                    key: ValueKey(_selectedAddressId ?? 'no-address'),
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 12,
+                      color: AppColors.grey,
+                    ),
                   ),
                 ),
               ],
@@ -1880,31 +2061,150 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _addresses.map((address) {
-            return RadioListTile<String>(
-              title: Text(
-                address,
+        content: _isLoadingAddresses
+            ? Container(
+                height: 100,
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              )
+            : _addressErrorMessage != null
+                ? Container(
+                    height: 100,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, color: AppColors.error, size: 32),
+                        SizedBox(height: 8),
+                        Text(
+                          _addressErrorMessage!,
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 14,
+                            color: AppColors.error,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_userAddresses.isNotEmpty) ...[
+                        Text(
+                          'Địa chỉ của bạn:',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        ..._userAddresses.map((address) {
+                          final addressText = '🏠 ${address.streetAddress}, ${address.wardName}, ${address.districtName}, ${address.provinceName}';
+                          return RadioListTile<String>(
+                            title: Text(
+                              addressText,
+                              style: ResponsiveHelper.responsiveTextStyle(
+                                context: context,
+                                baseSize: 14,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            value: address.id,
+                            groupValue: _selectedAddressId,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedAddressId = value!;
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            activeColor: AppColors.primary,
+                          );
+                        }).toList(),
+                      ],
+                      if (_elderlyAddresses.isNotEmpty) ...[
+                        if (_userAddresses.isNotEmpty) SizedBox(height: 16),
+                        Text(
+                          'Địa chỉ người thân:',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        ..._elderlyAddresses.entries.expand((entry) {
+                          final elderId = entry.key;
+                          final addresses = entry.value;
+                          final elder = _elderlyList.firstWhere((e) => e.id == elderId);
+                          
+                          return addresses.map((address) {
+                            final addressText = '👤 ${elder.fullName} - ${address.streetAddress}, ${address.wardName}, ${address.districtName}, ${address.provinceName}';
+                            return RadioListTile<String>(
+                              title: Text(
+                                addressText,
+                                style: ResponsiveHelper.responsiveTextStyle(
+                                  context: context,
+                                  baseSize: 14,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              value: address.id,
+                              groupValue: _selectedAddressId,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedAddressId = value!;
+                                });
+                                Navigator.of(context).pop();
+                              },
+                              activeColor: AppColors.primary,
+                            );
+                          });
+                        }).toList(),
+                      ],
+                      if (_userAddresses.isEmpty && _elderlyAddresses.isEmpty)
+                        Container(
+                          height: 100,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.location_off, color: AppColors.grey, size: 32),
+                              SizedBox(height: 8),
+                              Text(
+                                'Chưa có địa chỉ nào',
+                                style: ResponsiveHelper.responsiveTextStyle(
+                                  context: context,
+                                  baseSize: 14,
+                                  color: AppColors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+        actions: [
+          if (_addressErrorMessage != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _loadAddressData();
+              },
+              child: Text(
+                'Thử lại',
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 14,
-                  color: AppColors.text,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              value: address,
-              groupValue: _selectedAddress,
-              onChanged: (value) {
-                setState(() {
-                  _selectedAddress = value!;
-                });
-                Navigator.of(context).pop();
-              },
-              activeColor: AppColors.primary,
-            );
-          }).toList(),
-        ),
-        actions: [
+            ),
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: OutlinedButton.styleFrom(
@@ -1921,7 +2221,96 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     );
   }
 
-  void _checkout() {
+  Future<void> _checkout() async {
+    // Validate required fields
+    if (_cartData?.cartId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không tìm thấy thông tin giỏ hàng'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedAddressId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vui lòng chọn địa chỉ giao hàng'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+          log('Test Cart: ${_cartData?.cartId}');
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+            Text(
+              'Đang tạo đơn hàng...',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 16,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Create order request
+      final createOrderRequest = CreateOrderRequest(
+        cartId: _cartData!.cartId,
+        note: _note.isEmpty ? '' : _note,
+        addressId: _selectedAddressId!,
+      );
+
+      // Call create order API
+      final result = await _orderService.createOrder(createOrderRequest);
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (result.isSuccess) {
+        // Show success dialog
+        _showSuccessDialog(result.data?.message ?? 'Đặt hàng thành công!');
+      } else {
+        // Show error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message ?? 'Không thể tạo đơn hàng'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1956,7 +2345,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ],
         ),
         content: Text(
-          'Đơn hàng của bạn đã được tạo thành công.\nMã đơn hàng: DH${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+          message + (_note.isNotEmpty ? '\nGhi chú: $_note' : ''),
           style: ResponsiveHelper.responsiveTextStyle(
             context: context,
             baseSize: 16,
@@ -1980,8 +2369,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ),
             child: ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,

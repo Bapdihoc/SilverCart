@@ -38,4 +38,18 @@ class ElderRepositoryApi implements ElderRepository {
       return BaseResponse.error(message: e.toString());
     }
   }
+
+  @override
+  Future<BaseResponse<void>> updateElderCategory(String elderId, List<Map<String, String>> categories) async {
+    try {
+      // Pass the categories array directly as the body
+      await _api.updateElderCategory(elderId, categories);
+      return BaseResponse.success(data: null);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<void>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
 }

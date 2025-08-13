@@ -61,4 +61,13 @@ class ElderRepositoryMock implements ElderRepository {
       ),
     );
   }
+
+  @override
+  Future<BaseResponse<void>> updateElderCategory(String elderId, List<Map<String, dynamic>> categories) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Mock successful response
+    return BaseResponse.success(data: null);
+  }
 }

@@ -5,6 +5,9 @@ import 'package:retrofit/http.dart';
 import 'package:silvercart/models/category_response.dart';
 import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/product_response.dart';
+import 'package:silvercart/models/create_order_request.dart';
+import 'package:silvercart/models/create_order_response.dart';
+import 'package:silvercart/models/user_order_response.dart';
 part 'order_api_service.g.dart';
 
 class ParseErrorLogger {
@@ -32,5 +35,11 @@ abstract class OrderApiService {
 
   @GET('/api/Order/{id}')
   Future<OrderResponse> getOrder(@Path('id') int id);
+
+  @POST('/api/Test/CreateOrder')
+  Future<CreateOrderResponse> createOrder(@Body() CreateOrderRequest request);
+
+  @GET('/api/Order/user')
+  Future<UserOrderResponse> getUserOrders();
   
 }

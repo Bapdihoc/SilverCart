@@ -36,9 +36,8 @@ class UserDetailData {
   final String roleId;
   final String roleName;
   final List<UserDetailAddress> addresses;
-  final List<String> categoryLabels;
-  final int cartCount;
-  final int paymentCount;
+  final List<UserCategoryValue> categoryValues;
+  final String? emergencyPhoneNumber;
 
   UserDetailData({
     required this.id,
@@ -57,9 +56,8 @@ class UserDetailData {
     required this.roleId,
     required this.roleName,
     required this.addresses,
-    required this.categoryLabels,
-    required this.cartCount,
-    required this.paymentCount,
+    required this.categoryValues,
+    this.emergencyPhoneNumber,
   });
 
   factory UserDetailData.fromJson(Map<String, dynamic> json) =>
@@ -96,4 +94,30 @@ class UserDetailAddress {
       _$UserDetailAddressFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserDetailAddressToJson(this);
+}
+
+@JsonSerializable()
+class UserCategoryValue {
+  final String id;
+  final String code;
+  final String description;
+  final String label;
+  final int type;
+  final String? childrenId;
+  final String? childrentLabel;
+
+  UserCategoryValue({
+    required this.id,
+    required this.code,
+    required this.description,
+    required this.label,
+    required this.type,
+    this.childrenId,
+    this.childrentLabel,
+  });
+
+  factory UserCategoryValue.fromJson(Map<String, dynamic> json) =>
+      _$UserCategoryValueFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UserCategoryValueToJson(this);
 }

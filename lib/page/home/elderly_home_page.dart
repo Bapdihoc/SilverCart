@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
-import '../shopping/elderly_product_list_page.dart';
 import '../shopping/elderly_cart_page.dart';
+import '../shopping/elderly_products_page.dart';
+import '../../network/service/auth_service.dart';
+import '../../network/service/category_service.dart';
+import '../../models/user_detail_response.dart';
+import '../../models/root_category_response.dart';
+import '../../injection.dart';
 
 class ElderlyHomePage extends StatefulWidget {
   const ElderlyHomePage({super.key});
@@ -14,6 +19,80 @@ class ElderlyHomePage extends StatefulWidget {
 
 class _ElderlyHomePageState extends State<ElderlyHomePage> {
   int _selectedIndex = 0;
+  
+  // Services
+  late final AuthService _authService;
+  late final CategoryService _categoryService;
+  
+  // Categories data
+  List<dynamic> _categories = []; // Will store either UserCategoryValue or RootCategory
+  bool _isLoadingCategories = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = getIt<AuthService>();
+    _categoryService = getIt<CategoryService>();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() {
+      _isLoadingCategories = true;
+    });
+
+    try {
+      // First try to get user detail to get user's category preferences
+      final userId = await _authService.getUserId();
+      if (userId != null && userId.isNotEmpty) {
+        final userDetailResult = await _authService.getUserDetail(userId);
+        
+        if (userDetailResult.isSuccess && 
+            userDetailResult.data != null && 
+            userDetailResult.data!.data.categoryValues.isNotEmpty) {
+          // User has category preferences
+          setState(() {
+            _categories = userDetailResult.data!.data.categoryValues;
+            _isLoadingCategories = false;
+          });
+          return;
+        }
+      }
+      
+      // Fallback to root categories if user has no preferences
+      final rootCategoriesResult = await _categoryService.getRootListValueCategory();
+      if (rootCategoriesResult.isSuccess && rootCategoriesResult.data != null) {
+        setState(() {
+          _categories = rootCategoriesResult.data!.data;
+          _isLoadingCategories = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingCategories = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(rootCategoriesResult.message ?? 'Không thể tải danh mục'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingCategories = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi tải danh mục: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,11 +210,15 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
               children: [
                 IconButton(
                   icon: Icon(
-                    Icons.notifications_rounded,
+                    Icons.logout_rounded,
                     color: AppColors.primary,
                     size: ResponsiveHelper.getIconSize(context, 20),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    await _authService.signOut();
+                    if (mounted) {
+                      context.pushReplacement('/role-selection');
+                    }
                     // TODO: Show notifications
                   },
                 ),
@@ -287,76 +370,76 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
           // Welcome Section
-          Container(
-            margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Xin chào! 👋',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                      Text(
-                        'Bạn muốn mua gì hôm nay?',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: ResponsiveHelper.getIconSize(context, 60),
-                  height: ResponsiveHelper.getIconSize(context, 60),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    Icons.shopping_cart_rounded,
-                    size: ResponsiveHelper.getIconSize(context, 30),
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+          //   padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context) * 1.5),
+          //   decoration: BoxDecoration(
+          //     gradient: LinearGradient(
+          //       colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          //       begin: Alignment.topLeft,
+          //       end: Alignment.bottomRight,
+          //     ),
+          //     borderRadius: BorderRadius.circular(24),
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: AppColors.primary.withOpacity(0.3),
+          //         blurRadius: 24,
+          //         offset: const Offset(0, 8),
+          //       ),
+          //     ],
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Expanded(
+          //         child: Column(
+          //           crossAxisAlignment: CrossAxisAlignment.start,
+          //           children: [
+          //             Text(
+          //               'Xin chào! 👋',
+          //               style: ResponsiveHelper.responsiveTextStyle(
+          //                 context: context,
+          //                 baseSize: 30, // chữ lớn hơn
+          //                 fontWeight: FontWeight.bold,
+          //                 color: Colors.white,
+          //               ),
+          //             ),
+          //             SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          //             Text(
+          //               'Bạn muốn mua gì hôm nay?',
+          //               style: ResponsiveHelper.responsiveTextStyle(
+          //                 context: context,
+          //                 baseSize: 20, // chữ lớn hơn
+          //                 color: Colors.white.withOpacity(0.95),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //       Container(
+          //         width: ResponsiveHelper.getIconSize(context, 80),
+          //         height: ResponsiveHelper.getIconSize(context, 80),
+          //         decoration: BoxDecoration(
+          //           color: Colors.white.withOpacity(0.2),
+          //           borderRadius: BorderRadius.circular(24),
+          //         ),
+          //         child: Icon(
+          //           Icons.shopping_cart_rounded,
+          //           size: ResponsiveHelper.getIconSize(context, 40),
+          //           color: Colors.white,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
 
           // Quick Categories
           Padding(
             padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
             child: Text(
-              'Danh mục nhanh',
+              'Danh mục sản phẩm',
               style: ResponsiveHelper.responsiveTextStyle(
                 context: context,
-                baseSize: 20,
+                baseSize: 26, // chữ lớn hơn
                 fontWeight: FontWeight.bold,
                 color: AppColors.text,
               ),
@@ -368,154 +451,158 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           // Category Grid
           Padding(
             padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
-              mainAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
-              childAspectRatio: 1.1,
-              children: [
-                _buildModernCategoryCard(
-                  icon: Icons.restaurant_rounded,
-                  title: 'Thực phẩm',
-                  subtitle: 'Gạo, rau, thịt...',
-                  color: AppColors.primary,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ElderlyProductListPage(
-                          categoryTitle: 'Thực phẩm',
-                          categorySubtitle: 'Gạo, rau, thịt và các loại thực phẩm tươi ngon',
-                          categoryColor: AppColors.primary,
-                          categoryIcon: Icons.restaurant_rounded,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                _buildModernCategoryCard(
-                  icon: Icons.medication_rounded,
-                  title: 'Thuốc',
-                  subtitle: 'Thuốc, vitamin...',
-                  color: AppColors.secondary,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ElderlyProductListPage(
-                          categoryTitle: 'Thuốc',
-                          categorySubtitle: 'Thuốc, vitamin và các loại thực phẩm chức năng',
-                          categoryColor: AppColors.secondary,
-                          categoryIcon: Icons.medication_rounded,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                _buildModernCategoryCard(
-                  icon: Icons.home_rounded,
-                  title: 'Gia dụng',
-                  subtitle: 'Dầu ăn, bột giặt...',
-                  color: AppColors.success,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ElderlyProductListPage(
-                          categoryTitle: 'Gia dụng',
-                          categorySubtitle: 'Dầu ăn, bột giặt và các sản phẩm gia dụng',
-                          categoryColor: AppColors.success,
-                          categoryIcon: Icons.home_rounded,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                _buildModernCategoryCard(
-                  icon: Icons.favorite_rounded,
-                  title: 'Yêu thích',
-                  subtitle: 'Sản phẩm đã lưu',
-                  color: AppColors.error,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ElderlyProductListPage(
-                          categoryTitle: 'Yêu thích',
-                          categorySubtitle: 'Các sản phẩm bạn đã yêu thích và lưu lại',
-                          categoryColor: AppColors.error,
-                          categoryIcon: Icons.favorite_rounded,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-
-          // Recent Orders
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: ResponsiveHelper.getIconSize(context, 24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
-                    ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                Text(
-                  'Đơn hàng gần đây',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-          // Recent Orders List
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            child: Column(
-              children: [
-                _buildModernOrderCard(
-                  orderNumber: 'DH001',
-                  date: 'Hôm nay',
-                  status: 'Đang giao',
-                  items: ['Gạo, Rau cải, Thịt heo'],
-                  total: '150.000đ',
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                _buildModernOrderCard(
-                  orderNumber: 'DH002',
-                  date: 'Hôm qua',
-                  status: 'Hoàn thành',
-                  items: ['Thuốc cảm, Nước muối'],
-                  total: '85.000đ',
-                ),
-              ],
-            ),
+            child: _isLoadingCategories 
+                ? _buildCategoryLoadingGrid()
+                : _buildDynamicCategoryGrid(),
           ),
 
           SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
         ],
       ),
+    );
+  }
+
+  Widget _buildCategoryLoadingGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
+      mainAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
+      childAspectRatio: 1.1,
+      children: List.generate(4, (index) => _buildCategoryLoadingCard()),
+    );
+  }
+
+  Widget _buildCategoryLoadingCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 50),
+              height: ResponsiveHelper.getIconSize(context, 50),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(15),
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Container(
+              width: 80,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+            Container(
+              width: 100,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicCategoryGrid() {
+    if (_categories.isEmpty) {
+      return Container(
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.category_outlined,
+                size: ResponsiveHelper.getIconSize(context, 48),
+                color: AppColors.grey,
+              ),
+              SizedBox(height: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Chưa có danh mục nào',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 16,
+                  color: AppColors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 1, // 1 cột cho mobile, card 16:9
+        mainAxisSpacing: ResponsiveHelper.getLargeSpacing(context),
+        childAspectRatio: 16 / 9,
+      ),
+      itemCount:  _categories.length, // Show max 4 categories
+      itemBuilder: (context, index) {
+        final category = _categories[index];
+        return _buildDynamicCategoryCard(category, index);
+      },
+    );
+  }
+
+  Widget _buildDynamicCategoryCard(dynamic category, int index) {
+    // Get common properties from both UserCategoryValue and RootCategory
+    final String id = category is UserCategoryValue ? category.id : (category as RootCategory).id;
+    final String label = category is UserCategoryValue ? category.label : (category as RootCategory).label;
+    final String description = category is UserCategoryValue ? category.description : (category as RootCategory).description;
+    
+    // Define colors and icons for different categories
+    final List<Color> colors = [AppColors.primary, AppColors.secondary, AppColors.success, AppColors.error];
+    final List<IconData> icons = [
+      Icons.restaurant_rounded,
+      Icons.medication_rounded,
+      Icons.home_rounded,
+      Icons.category_rounded,
+    ];
+    
+    final color = colors[index % colors.length];
+    final icon = icons[index % icons.length];
+    
+    return _buildModernCategoryCard(
+      icon: icon,
+      title: label,
+      subtitle: description.length > 20 ? '${description.substring(0, 20)}...' : description,
+      color: color,
+      onTap: () {
+        // Navigate to elderly products page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ElderlyProductsPage(
+              categoryId: id,
+              categoryName: label,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -531,62 +618,71 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 24,
               offset: const Offset(0, 8),
             ),
           ],
-          border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+          border: Border.all(color: Colors.grey.withOpacity(0.12), width: 1),
         ),
         child: Padding(
-          padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          padding: EdgeInsets.symmetric(
+            horizontal: ResponsiveHelper.getLargeSpacing(context) * 1.2,
+            vertical: ResponsiveHelper.getLargeSpacing(context)),
+          child: Row(
             children: [
               Container(
-                width: ResponsiveHelper.getIconSize(context, 50),
-                height: ResponsiveHelper.getIconSize(context, 50),
+                width: ResponsiveHelper.getIconSize(context, 70),
+                height: ResponsiveHelper.getIconSize(context, 70),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [color, color.withOpacity(0.7)],
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: color.withOpacity(0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: Icon(
                   icon,
-                  size: ResponsiveHelper.getIconSize(context, 24),
+                  size: ResponsiveHelper.getIconSize(context, 36),
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: ResponsiveHelper.getSpacing(context)),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 12,
-                  color: AppColors.grey,
+              SizedBox(width: ResponsiveHelper.getLargeSpacing(context) * 1.2),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 22, // chữ lớn hơn
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                      ).copyWith(height: 1.25),
+                      softWrap: true,
+                    ),
+                    SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                    Text(
+                      subtitle,
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 16, // chữ lớn hơn
+                        color: AppColors.grey,
+                      ).copyWith(height: 1.35),
+                      softWrap: true,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -718,7 +814,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           ],
         ),
       ),
-    );
+            );
   }
 
   Widget _buildCompactOrdersPage() {

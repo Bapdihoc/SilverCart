@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:silvercart/page/elderly_management/elderly_profile_form_page.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/models/elderly_model.dart';
@@ -13,8 +14,7 @@ import '../../models/elder_list_response.dart';
 import '../../network/service/elder_service.dart';
 import '../../network/service/auth_service.dart';
 import '../../injection.dart';
-import 'elderly_profile_form_page.dart';
-import 'elderly_qr_management_page.dart';
+import 'elderly_profile_detail_page.dart';
 
 class ElderlyListPage extends StatefulWidget {
   const ElderlyListPage({super.key});
@@ -134,15 +134,23 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
   }
 
   Future<void> _navigateToAddElderly() async {
-    final result = await Navigator.of(context).push(
+    Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ElderlyProfileFormPage(),
+        builder: (context) => ElderlyProfileFormPage(),
       ),
     );
+  }
 
-    if (result == true) {
-      _loadElderly(); // Refresh list
-    }
+  Future<void> _navigateToElderlyDetail(Elderly elderly) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ElderlyProfileDetailPage(
+          elderly: elderly,
+        ),
+      ),
+    );
+    
+    _loadElderly(); // Refresh list after returning
   }
 
   Future<void> _navigateToEditElderly(Elderly elderly) async {
@@ -187,18 +195,15 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
 
       if (detailResponse.isSuccess && detailResponse.data != null) {
         // Navigate to detail page with fetched data
-        final result = await Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => ElderlyProfileFormPage(
+            builder: (context) => ElderlyProfileDetailPage(
               elderly: elderly,
-              userDetail: detailResponse.data!.data,
             ),
           ),
         );
-
-        if (result == true) {
-          _loadElderly(); // Refresh list
-        }
+        
+        _loadElderly(); // Refresh list after returning
       } else {
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -376,9 +381,11 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
   }
 
   void _navigateToQRManagement(Elderly elderly) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ElderlyQRManagementPage(elderly: elderly),
+    // TODO: Navigate to QR management page
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Chức năng quản lý QR đang phát triển'),
+        backgroundColor: AppColors.secondary,
       ),
     );
   }
@@ -958,146 +965,7 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
     );
   }
 
-  void _showElderlyOptions(Elderly elderly) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(ResponsiveHelper.getBorderRadius(context) * 2),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: ResponsiveHelper.getSpacing(context)),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.grey.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-              child: Column(
-                children: [
-                  Text(
-                    elderly.nickname,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  Text(
-                    elderly.fullName,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      color: AppColors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-            _buildBottomSheetOption(
-              icon: Icons.edit,
-              title: 'Chỉnh sửa thông tin',
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToEditElderly(elderly);
-              },
-            ),
-
-            _buildBottomSheetOption(
-              icon: Icons.qr_code,
-              title: 'Quản lý mã QR',
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToQRManagement(elderly);
-              },
-            ),
-
-            _buildBottomSheetOption(
-              icon: Icons.shopping_cart,
-              title: 'Xem đơn hàng',
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to orders
-              },
-            ),
-
-            _buildBottomSheetOption(
-              icon: Icons.analytics,
-              title: 'Thống kê chi tiêu',
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to analytics
-              },
-            ),
-
-            if (!elderly.isActive)
-              _buildBottomSheetOption(
-                icon: Icons.check_circle,
-                title: 'Kích hoạt',
-                color: AppColors.success,
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Activate elderly
-                },
-              )
-            else
-              _buildBottomSheetOption(
-                icon: Icons.pause_circle,
-                title: 'Tạm dừng',
-                color: AppColors.warning,
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Deactivate elderly
-                },
-              ),
-
-            SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomSheetOption({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: color ?? AppColors.primary,
-        size: ResponsiveHelper.getIconSize(context, 24),
-      ),
-      title: Text(
-        title,
-        style: ResponsiveHelper.responsiveTextStyle(
-          context: context,
-          baseSize: 16,
-          color: color ?? AppColors.text,
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1514,7 +1382,7 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
         ),
       ),
       child: InkWell(
-        onTap: () => _showElderlyOptions(elderly),
+        onTap: () => _navigateToElderlyDetail(elderly),
         borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),

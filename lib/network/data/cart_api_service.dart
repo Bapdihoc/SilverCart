@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:silvercart/models/cart_replace_request.dart';
 import 'package:silvercart/models/cart_replace_response.dart';
 import 'package:silvercart/models/cart_get_response.dart';
+import 'package:silvercart/models/change_cart_status_response.dart';
+import 'package:silvercart/models/elder_carts_response.dart';
 
 part 'cart_api_service.g.dart';
 
@@ -36,4 +38,19 @@ abstract class CartApiService {
     @Path('customerId') String customerId,
     @Query('status') int status,
   );
+
+  @GET('/api/Cart/GetCartByElderId/{elderId}')
+  Future<CartGetResponse> getCartByElderId(
+    @Path('elderId') String elderId,
+    @Query('status') int status,
+  );
+
+  @PUT('/api/Cart/{cartId}/ChangeCartStatus')
+  Future<ChangeCartStatusResponse> changeCartStatus(
+    @Path('cartId') String cartId,
+    @Query('status') int status,
+  );
+
+  @GET('/api/Cart/GetAllElderCarts')
+  Future<ElderCartsResponse> getAllElderCarts();
 }

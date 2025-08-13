@@ -38,11 +38,10 @@ UserDetailData _$UserDetailDataFromJson(Map<String, dynamic> json) =>
       addresses: (json['addresses'] as List<dynamic>)
           .map((e) => UserDetailAddress.fromJson(e as Map<String, dynamic>))
           .toList(),
-      categoryLabels: (json['categoryLabels'] as List<dynamic>)
-          .map((e) => e as String)
+      categoryValues: (json['categoryValues'] as List<dynamic>)
+          .map((e) => UserCategoryValue.fromJson(e as Map<String, dynamic>))
           .toList(),
-      cartCount: (json['cartCount'] as num).toInt(),
-      paymentCount: (json['paymentCount'] as num).toInt(),
+      emergencyPhoneNumber: json['emergencyPhoneNumber'] as String?,
     );
 
 Map<String, dynamic> _$UserDetailDataToJson(UserDetailData instance) =>
@@ -63,9 +62,8 @@ Map<String, dynamic> _$UserDetailDataToJson(UserDetailData instance) =>
       'roleId': instance.roleId,
       'roleName': instance.roleName,
       'addresses': instance.addresses,
-      'categoryLabels': instance.categoryLabels,
-      'cartCount': instance.cartCount,
-      'paymentCount': instance.paymentCount,
+      'categoryValues': instance.categoryValues,
+      'emergencyPhoneNumber': instance.emergencyPhoneNumber,
     };
 
 UserDetailAddress _$UserDetailAddressFromJson(Map<String, dynamic> json) =>
@@ -92,4 +90,26 @@ Map<String, dynamic> _$UserDetailAddressToJson(UserDetailAddress instance) =>
       'provinceID': instance.provinceID,
       'provinceName': instance.provinceName,
       'phoneNumber': instance.phoneNumber,
+    };
+
+UserCategoryValue _$UserCategoryValueFromJson(Map<String, dynamic> json) =>
+    UserCategoryValue(
+      id: json['id'] as String,
+      code: json['code'] as String,
+      description: json['description'] as String,
+      label: json['label'] as String,
+      type: (json['type'] as num).toInt(),
+      childrenId: json['childrenId'] as String?,
+      childrentLabel: json['childrentLabel'] as String?,
+    );
+
+Map<String, dynamic> _$UserCategoryValueToJson(UserCategoryValue instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'code': instance.code,
+      'description': instance.description,
+      'label': instance.label,
+      'type': instance.type,
+      'childrenId': instance.childrenId,
+      'childrentLabel': instance.childrentLabel,
     };

@@ -77,6 +77,54 @@ class AuthService {
   Future<BaseResponse<UserMeResponse>> getMe() async {
     return await _repo.getMe();
   }
+
+  // Validate token by calling /api/Auth/Me with the provided token
+  Future<BaseResponse<UserMeResponse>> validateToken(String token) async {
+    // Temporarily save the token to validate it
+    final prefs = await SharedPreferences.getInstance();
+    final originalToken = prefs.getString(_accessTokenKey);
+    
+    try {
+      // Set the token temporarily
+      await prefs.setString(_accessTokenKey, token);
+      
+      // Try to call /api/Auth/Me to validate the token
+      final result = await _repo.getMe();
+      
+      if (result.isSuccess && result.data != null) {
+        // Token is valid, keep it and save user data
+        final userData = result.data!;
+        await prefs.setString(_userIdKey, userData.userId ?? '');
+        await prefs.setString(_userRoleKey, userData.role ?? '');
+        await prefs.setString("userId", userData.userId ?? '');
+        // Set a default expiration (e.g., 24 hours from now)
+        final expiration = DateTime.now().add(Duration(hours: 24));
+        await prefs.setString(_expirationKey, expiration.toIso8601String());
+        
+        print('🔑 AuthService: Token validated successfully');
+        print('🔑 AuthService: User ID: ${userData.userId}');
+        print('🔑 AuthService: Role: ${userData.role}');
+      } else {
+        // Token is invalid, restore original token
+        if (originalToken != null) {
+          await prefs.setString(_accessTokenKey, originalToken);
+        } else {
+          await prefs.remove(_accessTokenKey);
+        }
+      }
+      
+      return result;
+    } catch (e) {
+      // Restore original token on error
+      if (originalToken != null) {
+        await prefs.setString(_accessTokenKey, originalToken);
+      } else {
+        await prefs.remove(_accessTokenKey);
+      }
+      
+      return BaseResponse.error(message: 'Token validation failed: ${e.toString()}');
+    }
+  }
   // Save login data to SharedPreferences
   Future<void> _saveLoginData(LoginResponse loginData) async {
     final prefs = await SharedPreferences.getInstance();

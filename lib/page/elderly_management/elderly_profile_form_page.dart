@@ -120,7 +120,7 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
       _medicalNotesController.text = userDetail.description;
       _emergencyContactController.text = ''; // Not available in API response
       _budgetController.text = '0'; // Not available in API response
-      _dietaryRestrictions = userDetail.categoryLabels;
+      _dietaryRestrictions = [];
 
       // Initialize addresses from API data
       if (userDetail.addresses.isNotEmpty) {
@@ -1227,7 +1227,7 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
         emergencyPhoneNumber: _emergencyContactController.text.trim(),
         relationShip: _selectedRelationship,
         gender: _selectedGender, // Use selected gender value
-        categoryValueIds: _dietaryRestrictions, // Using dietary restrictions as categoryValueIds
+        categoryValueIds: [], // Using dietary restrictions as categoryValueIds
         addresses: _addresses.map((address) => ElderAddress(
           streetAddress: address['streetAddress'] ?? '',
           wardCode: int.tryParse(address['wardCode'] ?? '0') ?? 0,
@@ -1494,7 +1494,7 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
                     icon: Icons.family_restroom_rounded,
                     items: _relationships.map((r) => DropdownMenuItem(
                       value: r,
-                      child: Text(r),
+                      child: Text(r, style: TextStyle(color: Colors.black, fontSize: 16),),
                     )).toList(),
                     onChanged: (value) => setState(() => _selectedRelationship = value!),
                   ),
@@ -2546,121 +2546,121 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: _addNewAddress,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ResponsiveHelper.getSpacing(context),
-                  vertical: ResponsiveHelper.getSpacing(context) / 2,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.add_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                    Text(
-                      'Thêm địa chỉ',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // GestureDetector(
+            //   onTap: _addNewAddress,
+            //   child: Container(
+            //     padding: EdgeInsets.symmetric(
+            //       horizontal: ResponsiveHelper.getSpacing(context),
+            //       vertical: ResponsiveHelper.getSpacing(context) / 2,
+            //     ),
+            //     decoration: BoxDecoration(
+            //       color: AppColors.primary.withOpacity(0.1),
+            //       borderRadius: BorderRadius.circular(12),
+            //     ),
+            //     child: Row(
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: [
+            //         Icon(
+            //           Icons.add_rounded,
+            //           size: 16,
+            //           color: AppColors.primary,
+            //         ),
+            //         SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+            //         Text(
+            //           'Thêm địa chỉ',
+            //           style: ResponsiveHelper.responsiveTextStyle(
+            //             context: context,
+            //             baseSize: 12,
+            //             fontWeight: FontWeight.w600,
+            //             color: AppColors.primary,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
           ],
         ),
         SizedBox(height: ResponsiveHelper.getSpacing(context)),
         
         // Address tabs
-        SizedBox(
-          height: 50,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _addresses.length,
-            separatorBuilder: (context, index) => 
-                SizedBox(width: ResponsiveHelper.getSpacing(context)),
-            itemBuilder: (context, index) {
-              final isSelected = _selectedAddressIndex == index;
-              final address = _addresses[index];
-              final hasData = (address['streetAddress']?.isNotEmpty == true) ||
-                             (address['provinceName']?.isNotEmpty == true);
+        // SizedBox(
+        //   height: 50,
+        //   child: ListView.separated(
+        //     scrollDirection: Axis.horizontal,
+        //     itemCount: _addresses.length,
+        //     separatorBuilder: (context, index) => 
+        //         SizedBox(width: ResponsiveHelper.getSpacing(context)),
+        //     itemBuilder: (context, index) {
+        //       final isSelected = _selectedAddressIndex == index;
+        //       final address = _addresses[index];
+        //       final hasData = (address['streetAddress']?.isNotEmpty == true) ||
+        //                      (address['provinceName']?.isNotEmpty == true);
               
-              return GestureDetector(
-                onTap: () {
-                  _saveCurrentAddress();
-                  setState(() {
-                    _selectedAddressIndex = index;
-                  });
-                  _loadAddressData(index);
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getSpacing(context),
-                    vertical: ResponsiveHelper.getSpacing(context) / 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.grey.withOpacity(0.3),
-                      width: 1,
-                    ),
-                    boxShadow: isSelected ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ] : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        hasData ? Icons.location_on_rounded : Icons.location_off_rounded,
-                        size: 16,
-                        color: isSelected ? Colors.white : AppColors.grey,
-                      ),
-                      SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                      Text(
-                        'Địa chỉ ${index + 1}',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : AppColors.text,
-                        ),
-                      ),
-                      if (_addresses.length > 1) ...[
-                        SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                        GestureDetector(
-                          onTap: () => _removeAddress(index),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: isSelected ? Colors.white.withOpacity(0.8) : AppColors.grey,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+        //       return GestureDetector(
+        //         onTap: () {
+        //           _saveCurrentAddress();
+        //           setState(() {
+        //             _selectedAddressIndex = index;
+        //           });
+        //           _loadAddressData(index);
+        //         },
+        //         child: Container(
+        //           padding: EdgeInsets.symmetric(
+        //             horizontal: ResponsiveHelper.getSpacing(context),
+        //             vertical: ResponsiveHelper.getSpacing(context) / 2,
+        //           ),
+        //           decoration: BoxDecoration(
+        //             color: isSelected ? AppColors.primary : Colors.white,
+        //             borderRadius: BorderRadius.circular(12),
+        //             border: Border.all(
+        //               color: isSelected ? AppColors.primary : AppColors.grey.withOpacity(0.3),
+        //               width: 1,
+        //             ),
+        //             boxShadow: isSelected ? [
+        //               BoxShadow(
+        //                 color: AppColors.primary.withOpacity(0.2),
+        //                 blurRadius: 4,
+        //                 offset: const Offset(0, 2),
+        //               ),
+        //             ] : null,
+        //           ),
+        //           child: Row(
+        //             mainAxisSize: MainAxisSize.min,
+        //             children: [
+        //               Icon(
+        //                 hasData ? Icons.location_on_rounded : Icons.location_off_rounded,
+        //                 size: 16,
+        //                 color: isSelected ? Colors.white : AppColors.grey,
+        //               ),
+        //               SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+        //               Text(
+        //                 'Địa chỉ ${index + 1}',
+        //                 style: ResponsiveHelper.responsiveTextStyle(
+        //                   context: context,
+        //                   baseSize: 12,
+        //                   fontWeight: FontWeight.w600,
+        //                   color: isSelected ? Colors.white : AppColors.text,
+        //                 ),
+        //               ),
+        //               if (_addresses.length > 1) ...[
+        //                 SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+        //                 GestureDetector(
+        //                   onTap: () => _removeAddress(index),
+        //                   child: Icon(
+        //                     Icons.close_rounded,
+        //                     size: 14,
+        //                     color: isSelected ? Colors.white.withOpacity(0.8) : AppColors.grey,
+        //                   ),
+        //                 ),
+        //               ],
+        //             ],
+        //           ),
+        //         ),
+        //       );
+        //     },
+        //   ),
+        // ),
       ],
     );
   }

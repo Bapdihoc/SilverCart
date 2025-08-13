@@ -13,7 +13,7 @@ dependencies:
   connectivity_plus: ^6.0.3
   go_router: ^13.2.0
   google_fonts: ^6.1.0
-  get: 4.7.2
+  # get: 4.7.2
   # QR Code functionality
   qr_flutter: ^4.1.0
   # qr_code_scanner:
@@ -33,6 +33,7 @@ dependencies:
   agora_rtc_engine: ^6.5.2
   path_provider: ^2.1.5
   device_info_plus: ^11.5.0
+  mobile_scanner: ^7.0.1
 
 dev_dependencies: 
   flutter_lints: ^5.0.0

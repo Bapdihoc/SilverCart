@@ -34,4 +34,10 @@ abstract class ElderApiService {
 
   @GET('/api/Elder/GetMyElders')
   Future<ElderListResponse> getMyElders();
+
+  @PUT('/api/Elder/UpdateElderCategory')
+  Future<void> updateElderCategory(
+    @Query('elderId') String elderId,
+    @Body() List<Map<String, String>> categories,
+  );
 }

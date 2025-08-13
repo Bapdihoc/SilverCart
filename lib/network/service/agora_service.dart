@@ -29,9 +29,23 @@ class AgoraService {
       _engine = createAgoraRtcEngine();
       await _engine!.initialize(const RtcEngineContext(appId: appId));
       
-      // Enable video
+      // Enable audio and video
+      await _engine!.enableAudio();
       await _engine!.enableVideo();
       await _engine!.startPreview();
+      
+      // Audio settings for better quality (especially for elderly users)
+      await _engine!.setAudioProfile(
+        profile: AudioProfileType.audioProfileDefault,
+        scenario: AudioScenarioType.audioScenarioGameStreaming,
+      );
+      
+      // Enable audio volume indication
+      await _engine!.enableAudioVolumeIndication(
+        interval: 200,
+        smooth: 3,
+        reportVad: true,
+      );
       
       _isEngineInitialized = true;
       log('✅ Agora engine initialized successfully');
@@ -60,7 +74,7 @@ class AgoraService {
     
     try {
       await _engine!.joinChannel(
-        token: token ?? '007eJxTYDC80DNd2TlnwWZW79CSj1dO/ZcSt4opmGzp03T7auvzA7kKDCnG5qlpyRbJaeZmRiZJiUmJaYaJFsmWaeaWqaapKQYmrKtnZDQEMjLUi71jYIRCEF+AoSS1uCQ+OSMxLy81J97QyJiBAQA5NyTi',
+        token: token ?? '007eJxTYDg4dbJmkpRO1N0fM6Mibqy/tK3J1W3y9VcM/dUNj+7mpUkqMKQYm6emJVskp5mbGZkkJSYlphkmWiRbpplbppqmphiYFHLMymgIZGRwKFnGzMgAgSA+J0NJanFJfEFGYgkDAwCBmiMv',
         channelId: channelName,
         uid: uid,
         options: const ChannelMediaOptions(
@@ -104,6 +118,7 @@ class AgoraService {
   Future<void> muteLocalAudio(bool mute) async {
     try {
       await _engine?.muteLocalAudioStream(mute);
+      log('✅ Mute local audio: $mute');
     } catch (e) {
       log('❌ Error muting audio: $e');
     }

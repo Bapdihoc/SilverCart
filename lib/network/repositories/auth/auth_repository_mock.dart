@@ -90,9 +90,17 @@ class AuthRepositoryMock implements AuthRepository {
             phoneNumber: '0967676722',
           ),
         ],
-        categoryLabels: [],
-        cartCount: 0,
-        paymentCount: 0,
+        categoryValues: [
+          UserCategoryValue(
+            id: '2b2d5572-8327-4dee-7c95-08ddd50b5c9b',
+            code: 'health_care',
+            description: 'Các sản phẩm và dịch vụ chăm sóc sức khỏe cho người cao tuổi',
+            label: 'Chăm sóc sức khỏe',
+            type: 0,
+            childrenId: 'bcf673f9-38e1-4fc1-80b3-08ddd50b9acd',
+            childrentLabel: null,
+          ),
+        ],
       ),
     ));
   }

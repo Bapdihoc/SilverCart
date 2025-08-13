@@ -62,6 +62,7 @@ import 'package:silvercart/network/service/cart_service_module.dart' as _i758;
 import 'package:silvercart/network/service/category_service.dart' as _i144;
 import 'package:silvercart/network/service/elder_service.dart' as _i1046;
 import 'package:silvercart/network/service/location_service.dart' as _i484;
+import 'package:silvercart/network/service/order_service.dart' as _i212;
 import 'package:silvercart/network/service/product_service.dart' as _i24;
 import 'package:silvercart/network/service/speech_service.dart' as _i773;
 import 'package:silvercart/network/service/user_session_service.dart' as _i385;
@@ -139,6 +140,8 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i484.LocationService>(
         () => _i484.LocationService(gh<_i136.LocationRepository>()));
+    gh.lazySingleton<_i212.OrderService>(
+        () => _i212.OrderService(gh<_i213.OrderRespository>()));
     gh.lazySingleton<_i805.CategoryRepository>(
         () => _i229.CategoryRepositoryApi(gh<_i109.CategoryApiService>()));
     gh.lazySingleton<_i24.ProductService>(

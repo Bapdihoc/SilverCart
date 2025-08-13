@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../models/cart_get_response.dart';
+import '../../network/service/cart_service.dart';
+import '../../injection.dart';
 
 class ElderlyCartPage extends StatefulWidget {
   const ElderlyCartPage({super.key});
@@ -10,40 +14,225 @@ class ElderlyCartPage extends StatefulWidget {
 }
 
 class _ElderlyCartPageState extends State<ElderlyCartPage> {
-  List<Map<String, dynamic>> _cartItems = [
-    {
-      'id': 1,
-      'name': 'Gạo tẻ thơm',
-      'price': 45000,
-      'quantity': 1,
-      'image': '🍚',
-      'note': 'Gạo ngon để nấu cơm',
-    },
-    {
-      'id': 2,
-      'name': 'Rau cải xanh',
-      'price': 15000,
-      'quantity': 2,
-      'image': '🥬',
-      'note': 'Rau tươi cho bữa trưa',
-    },
-    {
-      'id': 3,
-      'name': 'Paracetamol 500mg',
-      'price': 25000,
-      'quantity': 1,
-      'image': '💊',
-      'note': 'Thuốc giảm đau',
-    },
-  ];
+  late final CartService _cartService;
+  CartGetData? _cartData;
+  bool _isLoading = true;
+  bool _isSubmittingOrder = false;
+  String? _errorMessage;
 
-  String _note = 'Mua giúp mẹ những thứ này nhé. Cảm ơn con!';
-  bool _isUrgent = false;
+  @override
+  void initState() {
+    super.initState();
+    _cartService = getIt<CartService>();
+    _loadElderlyCart();
+  }
+
+  Future<void> _loadElderlyCart() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Get elderly ID from SharedPreferences (assuming we store it for elderly users)
+      final prefs = await SharedPreferences.getInstance();
+      final elderId = prefs.getString('userId'); // In elderly context, userId is elderId
+      
+      if (elderId == null) {
+        setState(() {
+          _errorMessage = 'Không tìm thấy thông tin người dùng';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Call API to get cart by elder ID
+      final result = await _cartService.getCartByElderId(elderId, 0);
+      
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _cartData = result.data!.data;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = result.message ?? 'Không thể tải giỏ hàng';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi tải giỏ hàng: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _submitOrder() async {
+    if (_cartData?.cartId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không tìm thấy thông tin giỏ hàng'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingOrder = true;
+    });
+
+    try {
+      // Call API to change cart status to 1 (submitted)
+      final result = await _cartService.changeCartStatus(_cartData!.cartId, 1);
+      
+      if (result.isSuccess) {
+        if (mounted) {
+          // Show success message
+          _showSubmitSuccessDialog();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Không thể gửi đơn hàng'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi gửi đơn hàng: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingOrder = false;
+        });
+      }
+    }
+  }
+
+  void _showSubmitSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Column(
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 80),
+              height: ResponsiveHelper.getIconSize(context, 80),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: Icon(
+                Icons.check_circle_rounded,
+                size: ResponsiveHelper.getIconSize(context, 50),
+                color: AppColors.success,
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+            Text(
+              'Đã gửi đơn hàng!',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.text,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        content: Text(
+          'Đơn hàng của bạn đã được gửi thành công. Người thân sẽ xem xét và phê duyệt đơn hàng.',
+          style: ResponsiveHelper.responsiveTextStyle(
+            context: context,
+            baseSize: 18,
+            color: AppColors.text,
+          ).copyWith(height: 1.4),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: EdgeInsets.symmetric(
+                  vertical: ResponsiveHelper.getLargeSpacing(context),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: Text(
+                'Hoàn tất',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Convert API data to UI format
+  List<Map<String, dynamic>> get _cartItems {
+    if (_cartData?.items == null) return [];
+    
+    return _cartData!.items.map((item) => {
+      'id': item.productVariantId,
+      'name': item.productName,
+      'emoji': _getProductEmoji(item.productName),
+      'price': item.productPrice,
+      'quantity': item.quantity,
+      'imageUrl': item.imageUrl,
+    }).toList();
+  }
+
+  // Helper method to get product emoji
+  String _getProductEmoji(String productName) {
+    final name = productName.toLowerCase();
+    
+    if (name.contains('thuốc') || name.contains('medicine')) return '💊';
+    if (name.contains('máy đo') || name.contains('monitor')) return '📊';
+    if (name.contains('vitamin') || name.contains('bổ sung')) return '🌟';
+    if (name.contains('gậy') || name.contains('cane')) return '🦯';
+    if (name.contains('dầu gội') || name.contains('shampoo')) return '🧴';
+    if (name.contains('kem') || name.contains('cream')) return '🧴';
+    if (name.contains('áo') || name.contains('shirt')) return '👕';
+    if (name.contains('quần') || name.contains('pants')) return '👖';
+    if (name.contains('giày') || name.contains('shoes')) return '👟';
+    
+    return '📦'; // Default emoji
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -51,10 +240,10 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
           margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -64,387 +253,330 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
             icon: Icon(
               Icons.arrow_back_rounded,
               color: AppColors.primary,
-              size: ResponsiveHelper.getIconSize(context, 20),
+              size: ResponsiveHelper.getIconSize(context, 28),
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
         title: Text(
           'Giỏ hàng của tôi',
           style: ResponsiveHelper.responsiveTextStyle(
             context: context,
-            baseSize: 22,
+            baseSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.text,
           ),
         ),
+        centerTitle: false,
         actions: [
           Container(
             margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: IconButton(
               icon: Icon(
-                Icons.delete_sweep_rounded,
-                color: AppColors.error,
-                size: ResponsiveHelper.getIconSize(context, 20),
+                Icons.refresh_rounded,
+                color: AppColors.primary,
+                size: ResponsiveHelper.getIconSize(context, 28),
               ),
-              onPressed: () => _showClearCartDialog(),
+              onPressed: _loadElderlyCart,
             ),
           ),
         ],
       ),
-      body: _cartItems.isEmpty ? _buildEmptyCart() : _buildCartContent(),
-      bottomNavigationBar: _cartItems.isNotEmpty ? _buildSubmitButton() : null,
+      body: _isLoading
+          ? _buildElderlyLoadingState()
+          : _errorMessage != null
+              ? _buildElderlyErrorState()
+              : _cartItems.isEmpty
+                  ? _buildElderlyEmptyCart()
+                  : _buildElderlyCartList(),
     );
   }
 
-  Widget _buildEmptyCart() {
+  Widget _buildElderlyLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: ResponsiveHelper.getIconSize(context, 120),
-            height: ResponsiveHelper.getIconSize(context, 120),
+            width: ResponsiveHelper.getIconSize(context, 100),
+            height: ResponsiveHelper.getIconSize(context, 100),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(60),
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
             ),
-            child: Icon(
-              Icons.shopping_cart_outlined,
-              size: ResponsiveHelper.getIconSize(context, 60),
-              color: Colors.grey,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 6,
+              ),
             ),
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           Text(
-            'Giỏ hàng trống',
+            'Đang tải giỏ hàng...',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: AppColors.text,
             ),
           ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           Text(
-            'Bạn chưa có sản phẩm nào trong giỏ hàng',
+            'Vui lòng đợi trong giây lát',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
-              baseSize: 16,
+              baseSize: 18,
               color: AppColors.grey,
             ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-          Container(
-            width: double.infinity,
-            margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_rounded,
-                    size: ResponsiveHelper.getIconSize(context, 24),
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                  Text(
-                    'Tiếp tục mua sắm',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCartContent() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-          // Cart Items Section
-          Container(
-            margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-              border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: ResponsiveHelper.getIconSize(context, 40),
-                        height: ResponsiveHelper.getIconSize(context, 40),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.shopping_bag_rounded,
-                          size: ResponsiveHelper.getIconSize(context, 20),
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                      Text(
-                        'Sản phẩm đã chọn (${_cartItems.length})',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                  ..._cartItems.map((item) => _buildCartItem(item)).toList(),
-                ],
+  Widget _buildElderlyErrorState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context) * 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 120),
+              height: ResponsiveHelper.getIconSize(context, 120),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(60),
+              ),
+              child: Icon(
+                Icons.error_outline_rounded,
+                size: ResponsiveHelper.getIconSize(context, 60),
+                color: AppColors.error,
               ),
             ),
-          ),
-
-
-
-          // Note Section
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-              border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 1.5),
+            Text(
+              'Không thể tải giỏ hàng',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 26,
+                fontWeight: FontWeight.w600,
+                color: AppColors.text,
+              ),
+              textAlign: TextAlign.center,
             ),
-            child: Padding(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: ResponsiveHelper.getIconSize(context, 40),
-                        height: ResponsiveHelper.getIconSize(context, 40),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.7)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.note_rounded,
-                          size: ResponsiveHelper.getIconSize(context, 20),
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                      Text(
-                        'Ghi chú',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
-                      ),
-                    ],
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Text(
+              _errorMessage ?? 'Đã xảy ra lỗi không xác định',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 20,
+                color: AppColors.grey,
+              ).copyWith(height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
+            
+            // Retry button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _loadElderlyCart,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: EdgeInsets.symmetric(
+                    vertical: ResponsiveHelper.getLargeSpacing(context),
                   ),
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                  TextField(
-                    controller: TextEditingController(text: _note),
-                    onChanged: (value) => _note = value,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Nhập ghi chú cho người thân...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: AppColors.primary, width: 2),
-                      ),
-                      filled: true,
-                      fillColor: Color(0xFFF8F9FA),
-                      contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-                    ),
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 16,
-                      color: AppColors.text,
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
+                ),
+                child: Text(
+                  'Thử lại',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
-          ),
-
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-          // Urgent Toggle
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-              border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-              child: Row(
-                children: [
-                  Container(
-                    width: ResponsiveHelper.getIconSize(context, 40),
-                    height: ResponsiveHelper.getIconSize(context, 40),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppColors.error, AppColors.error.withOpacity(0.7)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.priority_high_rounded,
-                      size: ResponsiveHelper.getIconSize(context, 20),
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                  Expanded(
-                    child: Text(
-                      'Yêu cầu khẩn cấp',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
-                      ),
-                    ),
-                  ),
-                  Switch(
-                    value: _isUrgent,
-                    onChanged: (value) {
-                      setState(() {
-                        _isUrgent = value;
-                      });
-                    },
-                    activeColor: AppColors.error,
-                    activeTrackColor: AppColors.error.withOpacity(0.3),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCartItem(Map<String, dynamic> item) {
+  Widget _buildElderlyEmptyCart() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context) * 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 120),
+              height: ResponsiveHelper.getIconSize(context, 120),
+              decoration: BoxDecoration(
+                color: AppColors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(60),
+              ),
+              child: Icon(
+                Icons.shopping_bag_outlined,
+                size: ResponsiveHelper.getIconSize(context, 60),
+                color: AppColors.grey,
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 1.5),
+            Text(
+              'Giỏ hàng trống',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 28,
+                fontWeight: FontWeight.bold,
+                color: AppColors.text,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Text(
+              'Chưa có sản phẩm nào trong giỏ hàng của bạn.',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 20,
+                color: AppColors.grey,
+              ).copyWith(height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
+            
+            // Shopping button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: EdgeInsets.symmetric(
+                    vertical: ResponsiveHelper.getLargeSpacing(context),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: Text(
+                  'Tiếp tục mua sắm',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildElderlyCartList() {
+    final total = _cartItems.fold<double>(
+      0, 
+      (sum, item) => sum + (item['price'] * item['quantity']),
+    );
+
+    return Column(
+      children: [
+        // Cart items list
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadElderlyCart,
+            color: AppColors.primary,
+            child: ListView.builder(
+              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+              itemCount: _cartItems.length,
+              itemBuilder: (context, index) {
+                return _buildElderlyCartItem(_cartItems[index]);
+              },
+            ),
+          ),
+        ),
+        
+        // Total section
+        if (_cartItems.isNotEmpty) _buildElderlyTotalSection(total),
+        
+        // Submit Order Button
+        if (_cartItems.isNotEmpty) _buildSubmitOrderButton(),
+      ],
+    );
+  }
+
+  Widget _buildElderlyCartItem(Map<String, dynamic> item) {
     return Container(
       margin: EdgeInsets.only(bottom: ResponsiveHelper.getLargeSpacing(context)),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       decoration: BoxDecoration(
-        color: Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+          width: 2,
+        ),
       ),
       child: Row(
         children: [
-          // Product Image
+          // Product image/emoji
           Container(
-            width: ResponsiveHelper.getIconSize(context, 60),
-            height: ResponsiveHelper.getIconSize(context, 60),
+            width: ResponsiveHelper.getIconSize(context, 80),
+            height: ResponsiveHelper.getIconSize(context, 80),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Center(
-              child: Text(
-                item['image'],
-                style: TextStyle(fontSize: 30),
-              ),
+              child: item['imageUrl'] != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.network(
+                        item['imageUrl'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            item['emoji'],
+                            style: TextStyle(
+                              fontSize: ResponsiveHelper.getIconSize(context, 40),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Text(
+                      item['emoji'],
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getIconSize(context, 40),
+                      ),
+                    ),
             ),
           ),
+          
           SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
           
-          // Product Info
+          // Product info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,445 +585,198 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
                   item['name'],
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
+                    baseSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
+                  ).copyWith(height: 1.3),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                
+                // Quantity
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ResponsiveHelper.getSpacing(context),
+                    vertical: ResponsiveHelper.getSpacing(context) / 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.secondary.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    'Số lượng: ${item['quantity']}',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                
+                // Price
+                Text(
+                  '${item['price']}đ',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildElderlyTotalSection(double total) {
+    return Container(
+      margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.2),
+          width: 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: ResponsiveHelper.getIconSize(context, 50),
+            height: ResponsiveHelper.getIconSize(context, 50),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(
+              Icons.payments_rounded,
+              size: ResponsiveHelper.getIconSize(context, 28),
+              color: Colors.white,
+            ),
+          ),
+          
+          SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+          
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tổng tiền',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
                     baseSize: 18,
                     fontWeight: FontWeight.w600,
                     color: AppColors.text,
                   ),
                 ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
                 Text(
-                  '${item['price'].toStringAsFixed(0)}đ',
+                  '${total.toInt()}đ',
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
-                    baseSize: 16,
+                    baseSize: 28,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                   ),
                 ),
-                if (item['note'] != null && item['note'].isNotEmpty) ...[
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  Text(
-                    'Ghi chú: ${item['note']}',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      color: AppColors.grey,
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-          
-          // Quantity and Remove
-          Column(
-            children: [
-              // Quantity
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ResponsiveHelper.getSpacing(context),
-                  vertical: ResponsiveHelper.getSpacing(context) / 2,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: Text(
-                  'Số lượng: ${item['quantity']}',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
-                ),
-              ),
-              SizedBox(height: ResponsiveHelper.getSpacing(context)),
-              
-              // Remove Button
-              GestureDetector(
-                onTap: () => _removeFromCart(item['id']),
-                child: Container(
-                  width: ResponsiveHelper.getIconSize(context, 40),
-                  height: ResponsiveHelper.getIconSize(context, 40),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
-                  ),
-                  child: Icon(
-                    Icons.delete_rounded,
-                    color: AppColors.error,
-                    size: ResponsiveHelper.getIconSize(context, 20),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSubmitButton() {
-    double total = _cartItems.fold(0.0, (sum, item) => sum + (item['price'] * item['quantity']));
-    
+  Widget _buildSubmitOrderButton() {
     return Container(
       margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Total
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tổng cộng:',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-              ),
-              Text(
-                '${total.toInt()}đ',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          
-          // Submit Button
-          Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _isSubmittingOrder ? null : _submitOrder,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            padding: EdgeInsets.symmetric(
+              vertical: ResponsiveHelper.getLargeSpacing(context) * 1.2,
             ),
-            child: ElevatedButton(
-              onPressed: () => _submitToFamily(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.send_rounded,
-                    size: ResponsiveHelper.getIconSize(context, 24),
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                  Text(
-                    'Gửi yêu cầu mua hàng',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
+            elevation: 8,
+            shadowColor: AppColors.primary.withOpacity(0.3),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _removeFromCart(int itemId) {
-    setState(() {
-      _cartItems.removeWhere((item) => item['id'] == itemId);
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Container(
-              width: ResponsiveHelper.getIconSize(context, 24),
-              height: ResponsiveHelper.getIconSize(context, 24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.check_rounded,
-                size: ResponsiveHelper.getIconSize(context, 16),
-                color: AppColors.success,
-              ),
-            ),
-            SizedBox(width: ResponsiveHelper.getSpacing(context)),
-            Text('Đã xóa sản phẩm khỏi giỏ hàng'),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      ),
-    );
-  }
-
-  void _showClearCartDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: ResponsiveHelper.getIconSize(context, 60),
-                  height: ResponsiveHelper.getIconSize(context, 60),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Icon(
-                    Icons.delete_sweep_rounded,
-                    size: ResponsiveHelper.getIconSize(context, 30),
-                    color: AppColors.error,
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                Text(
-                  'Xóa giỏ hàng',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                Text(
-                  'Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 16,
-                    color: AppColors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                Row(
+          child: _isSubmittingOrder
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                        ),
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            'Hủy',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                        ),
+                    SizedBox(
+                      width: ResponsiveHelper.getIconSize(context, 24),
+                      height: ResponsiveHelper.getIconSize(context, 24),
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
                       ),
                     ),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                    Expanded(
-                      child: Container(
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.error, AppColors.error.withOpacity(0.8)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.error.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _cartItems.clear();
-                            });
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            'Xóa',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                    SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+                    Text(
+                      'Đang gửi...',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: ResponsiveHelper.getIconSize(context, 50),
+                      height: ResponsiveHelper.getIconSize(context, 50),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Icon(
+                        Icons.send_rounded,
+                        size: ResponsiveHelper.getIconSize(context, 28),
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+                    Text(
+                      'Gửi đơn hàng',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
-
-
-
-  void _submitToFamily() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: ResponsiveHelper.getIconSize(context, 80),
-                  height: ResponsiveHelper.getIconSize(context, 80),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.success, AppColors.success.withOpacity(0.7)],
-                    ),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: Icon(
-                    Icons.check_rounded,
-                    size: ResponsiveHelper.getIconSize(context, 40),
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                Text(
-                  'Gửi yêu cầu thành công!',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                                 Text(
-                   'Yêu cầu mua hàng đã được gửi thành công!',
-                   style: ResponsiveHelper.responsiveTextStyle(
-                     context: context,
-                     baseSize: 16,
-                     color: AppColors.grey,
-                   ),
-                   textAlign: TextAlign.center,
-                 ),
-                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                Container(
-                  width: double.infinity,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.success, AppColors.success.withOpacity(0.8)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.success.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _cartItems.clear();
-                      });
-                      Navigator.pop(context);
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Hoàn tất',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-} 
+}
