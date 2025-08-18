@@ -74,8 +74,8 @@ class AgoraService {
     
     try {
       await _engine!.joinChannel(
-        token: token ?? '007eJxTYDg4dbJmkpRO1N0fM6Mibqy/tK3J1W3y9VcM/dUNj+7mpUkqMKQYm6emJVskp5mbGZkkJSYlphkmWiRbpplbppqmphiYFHLMymgIZGRwKFnGzMgAgSA+J0NJanFJfEFGYgkDAwCBmiMv',
-        channelId: channelName,
+        token: '006d37efc8cf7624babaf1a8c9f79e5ed04IABBFpK8zkdxIS8A2ru9yZoTLgeh4W7+g689+0Klye3dm1w+93IAAAAAIgBi4REkVnefaAQAAQBWd59oAgBWd59oAwBWd59oBABWd59o',
+        channelId: 'call_i3050',
         uid: uid,
         options: const ChannelMediaOptions(
           clientRoleType: ClientRoleType.clientRoleBroadcaster,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../network/service/product_service.dart';
 import '../../models/product_search_request.dart';
 import '../../injection.dart';
@@ -389,7 +390,7 @@ class _ElderlyProductsPageState extends State<ElderlyProductsPage> {
                         children: [
                           if (product['originalPrice'] != null) ...[
                             Text(
-                              '${product['originalPrice']}đ',
+                              CurrencyUtils.formatVND(product['originalPrice']),
                               style: ResponsiveHelper.responsiveTextStyle(
                                 context: context,
                                 baseSize: 16,
@@ -401,7 +402,7 @@ class _ElderlyProductsPageState extends State<ElderlyProductsPage> {
                             SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
                           ],
                           Text(
-                            '${product['price']}đ',
+                            CurrencyUtils.formatVND(product['price']),
                             style: ResponsiveHelper.responsiveTextStyle(
                               context: context,
                               baseSize: 24,

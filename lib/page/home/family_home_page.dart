@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:silvercart/page/elderly_management/elderly_list_page.dart';
-import 'package:silvercart/page/address_management/address_list_page.dart';
 import 'package:silvercart/page/orders/order_approval_list_page.dart';
 import 'package:silvercart/page/orders/user_order_list_page.dart';
 import 'package:silvercart/page/settings/guardian_settings_page.dart';
@@ -27,7 +26,6 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
         children: [
           GuardianDashboardPage(),
           ElderlyListPage(),
-          AddressListPage(),
           UserOrderListPage(),
           OrderApprovalListPage(),
           GuardianSettingsPage(),
@@ -88,24 +86,19 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
                 index: 1,
               ),
               _buildNavItem(
-                icon: Icons.location_on_rounded,
-                label: 'Địa chỉ',
-                index: 2,
-              ),
-              _buildNavItem(
                 icon: Icons.receipt_long_rounded,
                 label: 'Đơn hàng',
-                index: 3,
+                index: 2,
               ),
               _buildNavItem(
                 icon: Icons.approval_rounded,
                 label: 'Duyệt đơn',
-                index: 4,
+                index: 3,
               ),
               _buildNavItem(
                 icon: Icons.settings_rounded,
                 label: 'Cài đặt',
-                index: 5,
+                index: 4,
               ),
             ],
           ),

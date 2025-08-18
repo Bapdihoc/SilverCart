@@ -3,9 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:silvercart/network/service/auth_service.dart';
 import 'package:silvercart/injection.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
-import '../../routes/app_routes.dart';
+import '../../models/user_me_response.dart';
 
 class GuardianSettingsPage extends StatefulWidget {
   const GuardianSettingsPage({super.key});
@@ -28,11 +27,23 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
   ];
 
   late final AuthService _authService;
+  UserMeResponse? _me;
+  // bool _loadingMe = true;
 
   @override
   void initState() {
     super.initState();
     _authService = getIt<AuthService>();
+    _loadMe();
+  }
+
+  Future<void> _loadMe() async {
+    try {
+      final result = await _authService.getMe();
+      if (mounted) setState(() { _me = result.data; });
+    } catch (_) {
+      // ignore
+    }
   }
 
   @override
@@ -140,24 +151,24 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Nguyễn Văn Guardian',
+                  _me?.userName ?? '—',
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
-                    baseSize: 20,
+                    baseSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Text(
-                  'guardian@silvercart.app',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 14,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                // Text(
+                //   _me?.userId ?? '—',
+                //   style: ResponsiveHelper.responsiveTextStyle(
+                //     context: context,
+                //     baseSize: 14,
+                //     color: Colors.white.withOpacity(0.9),
+                //   ),
+                // ),
+                // SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: ResponsiveHelper.getSpacing(context),
@@ -168,7 +179,7 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
                     borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
                   ),
                   child: Text(
-                    '👑 Guardian Premium',
+                    _me == null ? 'Đang tải...' : '👑 Vai trò: ${_me!.role}',
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 12,

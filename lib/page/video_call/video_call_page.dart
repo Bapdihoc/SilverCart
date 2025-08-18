@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,7 +38,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     _initializeAgora();
     
     // Set default channel name
-    _channelController.text = 'test_phat';
+    _channelController.text = 'call_i3050';
   }
   
   @override
@@ -90,7 +91,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       },
       onError: (ErrorCodeType err, String msg) {
         log('❌ Agora error: $err, message: $msg');
-        _showErrorSnackBar('Lỗi video call: $msg');
+        _showErrorSnackBar('Lỗi video call: ${jsonEncode(err)}');
         setState(() {
           _isConnecting = false;
         });
@@ -121,6 +122,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     
     final success = await _agoraService.joinChannel(
       channelName: _channelName!,
+      token: '006d37efc8cf7624babaf1a8c9f79e5ed04MbYFJA1zbiWVNf8Q+2nnN0LHuJkwlEPFEa2v+8oMmS8AQAgZDM3ZWZjOGNmNzYyNGJhYmFmMWE4YzlmNzllNWVkMDQARmNhbGxfYWNhMDRiNzJmYzdhNDBmZWIzNDkwOGRkZDUwMjhiOTNfZGM2ODg5YzZiOTUwNDEyZmIzNDgwOGRkZDUwMjhiOTMAIGRjNjg4OWM2Yjk1MDQxMmZiMzQ4MDhkZGQ1MDI4YjkzsyBIWGic6qMABA3'
     );
     
     if (!success) {

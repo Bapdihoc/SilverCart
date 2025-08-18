@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:silvercart/core/utils/responsive_helper.dart';
+import 'package:silvercart/models/create_order_request.dart';
+import 'package:silvercart/network/service/auth_service.dart';
+import 'package:silvercart/network/service/order_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/elder_carts_response.dart';
 import '../../network/service/cart_service.dart';
@@ -16,7 +22,8 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late final CartService _cartService;
-  
+  late final AuthService _authService;
+  late final OrderService _orderService;
   String _selectedElderlyFilter = 'Tất cả';
   String _selectedSortOption = 'Mới nhất';
   String _searchQuery = '';
@@ -38,6 +45,8 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _cartService = getIt<CartService>();
+    _authService = getIt<AuthService>();
+    _orderService = getIt<OrderService>();
     _loadElderCarts();
   }
 
@@ -537,13 +546,111 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
       ),
     );
   }
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 40),
+              height: ResponsiveHelper.getIconSize(context, 40),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.success,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              'Đặt hàng thành công!',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.success,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: ResponsiveHelper.responsiveTextStyle(
+            context: context,
+            baseSize: 16,
+            color: AppColors.text,
+          ),
+        ),
+        actions: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.success, AppColors.success.withOpacity(0.8)],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.success.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous page
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'OK',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _approveCart(ElderCartData cart) async {
     try {
+      String userId = await getIt<AuthService>().getUserId() ?? '';
+      final dataElder = await _authService.getUserDetail(cart.elderId);
+      if(dataElder.isSuccess && dataElder.data != null){
+        String addressId = dataElder.data!.data.addresses[0].id;
       // Call API to change cart status to 'Approve' (status = 2)
-      final result = await _cartService.changeCartStatus(cart.cartId, 2);
-      
+      final result = await _orderService.createOrder(CreateOrderRequest(cartId: cart.cartId, note: '', addressId: addressId));
+      String url  = result.data?.data;
       if (result.isSuccess) {
+           final uri = Uri.parse(url);
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          final status = await context.push('/payment/callback');
+          if (status == 'success') {
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Thanh toán thất bại hoặc bị hủy'), backgroundColor: AppColors.error),
+            );
+          }
         // Update local data
         setState(() {
           final index = _allCarts.indexWhere((c) => c.cartId == cart.cartId);
@@ -576,6 +683,8 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
           ),
         );
       }
+      }
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

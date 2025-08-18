@@ -22,13 +22,12 @@ class OrderRespositoryMock implements OrderRespository {
   @override
   Future<BaseResponse<CreateOrderResponse>> createOrder(CreateOrderRequest request) async {
     // Simulate API delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
-    // Mock successful response
+    await Future.delayed(const Duration(milliseconds: 300));
+    // Return mock payment link in data field
     return BaseResponse.success(
       data: CreateOrderResponse(
-        message: 'Success',
-        data: null,
+        message: 'Create VNPAY order (mock)',
+        data: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?mock=true',
       ),
     );
   }

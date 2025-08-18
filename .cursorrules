@@ -1,0 +1,69 @@
+# SilverCart Project Rules
+
+## API Error Handling Pattern
+
+### 1. ErrorInterceptor Implementation
+- Create `ErrorInterceptor` extending Dio's `Interceptor`
+- Override `onError` method to handle HTTP errors
+- Extract error messages from response fields: `message`, `error`, `errorMessage`, `msg`, `Message`, `Error`
+- Provide Vietnamese fallback messages for different HTTP status codes
+- Handle network errors (timeout, connection issues, SSL certificate errors)
+
+### 2. Dio Configuration
+- Add `ErrorInterceptor` to Dio interceptors list in `DioModule`
+- Place ErrorInterceptor before LogInterceptor for proper error handling
+- Configure base URL and headers in DioModule
+
+### 3. ApiResponseHandler Utility
+- Create `ApiResponseHandler` class for consistent error handling
+- Implement `handleResponse<T>()` for converting API responses to BaseResponse
+- Implement `handleError<T>()` for converting DioException to BaseResponse with Vietnamese messages
+- Implement `_extractErrorMessage()` for extracting error messages from response data
+- Implement `getDefaultErrorMessage()` for Vietnamese messages by status code
+
+### 4. Repository Error Handling
+- Always wrap API calls in try-catch blocks
+- Use `ApiResponseHandler.handleError<T>(e)` for DioException
+- Return `BaseResponse.error(message: e.toString())` for other exceptions
+- For void methods that throw errors, use `throw Exception(errorResponse.message)`
+
+### 5. UI Error Display
+- Extract error messages from Exception objects
+- Display user-friendly Vietnamese error messages in SnackBar
+- Set appropriate error colors and durations
+- Handle both API errors and network errors gracefully
+
+### 6. Vietnamese Error Messages
+- 400: "Yêu cầu không hợp lệ"
+- 401: "Không có quyền truy cập. Vui lòng đăng nhập lại"
+- 403: "Truy cập bị từ chối"
+- 404: "Không tìm thấy tài nguyên yêu cầu"
+- 422: "Dữ liệu không hợp lệ"
+- 429: "Quá nhiều yêu cầu. Vui lòng thử lại sau"
+- 500: "Lỗi máy chủ nội bộ"
+- Connection Timeout: "Kết nối tới máy chủ bị timeout"
+- Connection Error: "Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối internet"
+
+### 7. Code Structure
+- Keep error handling consistent across all repositories
+- Use BaseResponse<T> for type-safe error handling
+- Prioritize backend error messages over default messages
+- Always provide meaningful Vietnamese error messages to users
+
+### 8. File Organization
+- Place interceptors in `lib/network/data/`
+- Place response handlers in `lib/network/data/`
+- Place repositories in `lib/network/repositories/`
+- Place services in `lib/network/service/`
+
+### 9. Testing
+- Test error scenarios for all API endpoints
+- Verify Vietnamese error messages are displayed correctly
+- Test network error handling (offline, timeout scenarios)
+- Ensure error messages are user-friendly and actionable
+
+### 10. Documentation
+- Document error handling patterns in README files
+- Provide usage examples for new developers
+- Keep error message translations up to date
+- Document any changes to error handling logic

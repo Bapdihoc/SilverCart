@@ -4,10 +4,14 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:silvercart/page/shopping/shopping_cart_page.dart';
 import '../../core/constants/app_colors.dart';
 
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../models/product_detail_response.dart';
+import '../../models/product_search_request.dart';
 import '../../models/cart_replace_request.dart';
 
 import '../../network/service/product_service.dart';
@@ -34,7 +38,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   Map<String, String> _selectedStyles = {}; // Map of styleId -> optionId
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  late Animation<Offset> _positionAnimation;
+  // late Animation<Offset> _positionAnimation;
   late Animation<double> _opacityAnimation;
   OverlayEntry? _overlayEntry;
   final GlobalKey _addToCartButtonKey = GlobalKey();
@@ -51,6 +55,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   bool _isSpeechEnabled = false;
   bool _isListening = false;
   bool _isSpeakingInstructions = false;
+
+  // Related products (Similar products)
+  bool _isLoadingRelated = false;
+  String? _relatedErrorMessage;
+  List<Map<String, dynamic>> _relatedProducts = [];
 
   final List<String> _elderlyList = [
     'Bà Nguyễn Thị A',
@@ -72,9 +81,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     return _productDetail!.productVariants.where((variant) {
       // Check if variant has all selected style values
-      for (final entry in _selectedStyles.entries) {
-        final styleId = entry.key;
-        final selectedOptionId = entry.value;
+    for (final entry in _selectedStyles.entries) {
+      final selectedOptionId = entry.value;
         
         // Check if this variant has the selected option for this style
         final hasSelectedOption = variant.productVariantValues.any((value) {
@@ -106,9 +114,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     // Check if any variant exists with these selections
     final hasMatchingVariant = _productDetail!.productVariants.any((variant) {
       // Check if variant has all selected style values
-      for (final entry in testSelections.entries) {
-        final selectedStyleId = entry.key;
-        final selectedOptionId = entry.value;
+        for (final entry in testSelections.entries) {
+          final selectedOptionId = entry.value;
         
         // Check if this variant has the selected option for this style
         final hasSelectedOption = variant.productVariantValues.any((value) {
@@ -137,7 +144,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     return _productDetail!.productVariants.where((variant) {
       // Check if variant has all selected style values
       for (final entry in testSelections.entries) {
-        final selectedStyleId = entry.key;
         final selectedOptionId = entry.value;
         
         // Check if this variant has the selected option for this style
@@ -153,6 +159,32 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     }).length;
   }
 
+  // Check if all required styles are selected
+  bool get _areAllStylesSelected {
+    if (_productDetail == null || _productDetail!.styles.isEmpty) {
+      // No styles required, so it's valid
+      return true;
+    }
+    
+    // Check if all styles have been selected
+    for (final style in _productDetail!.styles) {
+      if (!_selectedStyles.containsKey(style.listOfValueId) || 
+          _selectedStyles[style.listOfValueId] == null ||
+          _selectedStyles[style.listOfValueId]!.isEmpty) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // Check if add to cart button should be enabled
+  bool get _canAddToCart {
+    return _currentVariant != null && 
+           _currentVariant!.stock > 0 && 
+           _areAllStylesSelected;
+  }
+
   // Clear style selections that are no longer valid after changing a style
   void _clearInvalidStyleSelections(String changedStyleId, String newOptionId) {
     if (_productDetail == null) return;
@@ -166,7 +198,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     
     for (final entry in _selectedStyles.entries) {
       final styleId = entry.key;
-      final selectedOptionId = entry.value;
+      final _ = entry.value; // value not needed here
       
       // Skip the style that was just changed
       if (styleId == changedStyleId) continue;
@@ -175,7 +207,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       final isValid = _productDetail!.productVariants.any((variant) {
         // Check if variant has all selected style values
         for (final testEntry in testSelections.entries) {
-          final testStyleId = testEntry.key;
+          final _ = testEntry.key; // key not used in check
           final testOptionId = testEntry.value;
           
           final hasSelectedOption = variant.productVariantValues.any((value) {
@@ -220,15 +252,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       ),
     );
 
-    _positionAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, -1.5),
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.9, curve: Curves.easeInOutCubic),
-      ),
-    );
+    // Unused: reserved for future animation use
 
     _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
@@ -278,6 +302,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           _productDetail = result.data!.data;
           _isLoading = false;
         });
+        // Load related products after we have category info
+        _loadRelatedProducts();
       } else {
         setState(() {
           _errorMessage = result.message ?? 'Không thể tải thông tin sản phẩm';
@@ -288,6 +314,37 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       setState(() {
         _errorMessage = 'Lỗi tải thông tin sản phẩm: ${e.toString()}';
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadRelatedProducts() async {
+    if (_productDetail == null || _productDetail!.categories.isEmpty) return;
+    setState(() {
+      _isLoadingRelated = true;
+      _relatedErrorMessage = null;
+    });
+
+    try {
+      // Dùng toàn bộ danh mục của sản phẩm hiện tại (mảng ID)
+      final List<String> categoryIds = _productDetail!.categories.map((c) => c.id).toList();
+      final request = ProductSearchRequest(
+        categoryIds: categoryIds,
+        page: 1,
+        pageSize: 10,
+      );
+
+      final results = await _productService.searchProductsForUI(request);
+
+      setState(() {
+        // Optionally filter out current product
+        _relatedProducts = results.where((p) => p['id'] != _productDetail!.id).toList();
+        _isLoadingRelated = false;
+      });
+    } catch (e) {
+      setState(() {
+        _relatedErrorMessage = 'Không thể tải sản phẩm tương tự: ${e.toString()}';
+        _isLoadingRelated = false;
       });
     }
   }
@@ -385,13 +442,13 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     if (_currentVariant != null) {
       final hasDiscount = _currentVariant!.discount > 0;
       if (hasDiscount) {
-        await _speechService.speakPriceInfo(
-          '${_currentVariant!.originalPrice.toInt()}',
-          '${_currentVariant!.discountedPrice.toInt()}',
+          await _speechService.speakPriceInfo(
+          CurrencyUtils.formatVND(_currentVariant!.originalPrice, withSymbol: false),
+          CurrencyUtils.formatVND(_currentVariant!.discountedPrice, withSymbol: false),
           '${_currentVariant!.discount}',
         );
       } else {
-        await _speechService.speak('Giá sản phẩm: ${_currentVariant!.discountedPrice.toInt()} đồng');
+        await _speechService.speak('Giá sản phẩm: ${CurrencyUtils.formatVND(_currentVariant!.discountedPrice)}');
       }
     }
   }
@@ -729,113 +786,116 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ),
       ),
       actions: [
-        Container(
-          margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(
-              ResponsiveHelper.getBorderRadius(context),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.favorite_border,
-              color: AppColors.error,
-              size: ResponsiveHelper.getIconSize(context, 20),
-            ),
-            onPressed: () {
-              // TODO: Add to favorites
-            },
-          ),
-        ),
-        Container(
-          margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(
-              ResponsiveHelper.getBorderRadius(context),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Stack(
-              children: [
-                Icon(
-                  Icons.shopping_cart_outlined,
-                  color: AppColors.primary,
-                  size: ResponsiveHelper.getIconSize(context, 20),
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 12,
-                      minHeight: 12,
-                    ),
-                    child: Text(
-                      '3',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 8,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            onPressed: () {
-              // TODO: Navigate to cart
-            },
-          ),
-        ),
-        // Voice Assistant Button
-        if (_isSpeechEnabled)
+        // Container(
+        //   margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+        //   decoration: BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.circular(
+        //       ResponsiveHelper.getBorderRadius(context),
+        //     ),
+        //     boxShadow: [
+        //       BoxShadow(
+        //         color: Colors.black.withOpacity(0.1),
+        //         blurRadius: 10,
+        //         offset: const Offset(0, 2),
+        //       ),
+        //     ],
+        //   ),
+        //   child: IconButton(
+        //     icon: Icon(
+        //       Icons.favorite_border,
+        //       color: AppColors.error,
+        //       size: ResponsiveHelper.getIconSize(context, 20),
+        //     ),
+        //     onPressed: () {
+        //       // TODO: Add to favorites
+        //     },
+        //   ),
+        // ),
           Container(
             margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
             decoration: BoxDecoration(
-              color: _isListening ? AppColors.primary : Colors.white,
-              borderRadius: BorderRadius.circular(
-                ResponsiveHelper.getBorderRadius(context),
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
               ),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.3),
                   blurRadius: 10,
-                  offset: const Offset(0, 2),
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: IconButton(
-              icon: Icon(
-                _isListening ? Icons.mic : Icons.mic_none,
-                color: _isListening ? Colors.white : AppColors.secondary,
-                size: ResponsiveHelper.getIconSize(context, 20),
-              ),
-              onPressed: _toggleVoiceAssistant,
+            child: Stack(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.shopping_cart_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+                    );
+                  },
+                ),
+                // Positioned(
+                //   right: 8,
+                //   top: 8,
+                //   child: Container(
+                //     padding: const EdgeInsets.all(2),
+                //     decoration: BoxDecoration(
+                //       color: AppColors.error,
+                //       borderRadius: BorderRadius.circular(8),
+                //     ),
+                //     constraints: const BoxConstraints(
+                //       minWidth: 16,
+                //       minHeight: 16,
+                //     ),
+                //     child: Text(
+                //       '3',
+                //       style: ResponsiveHelper.responsiveTextStyle(
+                //         context: context,
+                //         baseSize: 10,
+                //         color: Colors.white,
+                //         fontWeight: FontWeight.bold,
+                //       ),
+                //       textAlign: TextAlign.center,
+                //     ),
+                //   ),
+                // ),
+              ],
             ),
           ),
+        // // Voice Assistant Button
+        // if (_isSpeechEnabled)
+        //   Container(
+        //     margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+        //     decoration: BoxDecoration(
+        //       color: _isListening ? AppColors.primary : Colors.white,
+        //       borderRadius: BorderRadius.circular(
+        //         ResponsiveHelper.getBorderRadius(context),
+        //       ),
+        //       boxShadow: [
+        //         BoxShadow(
+        //           color: Colors.black.withOpacity(0.1),
+        //           blurRadius: 10,
+        //           offset: const Offset(0, 2),
+        //         ),
+        //       ],
+        //     ),
+        //     child: IconButton(
+        //       icon: Icon(
+        //         _isListening ? Icons.mic : Icons.mic_none,
+        //         color: _isListening ? Colors.white : AppColors.secondary,
+        //         size: ResponsiveHelper.getIconSize(context, 20),
+        //       ),
+        //       onPressed: _toggleVoiceAssistant,
+        //     ),
+        //   ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
@@ -1214,7 +1274,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             Row(
               children: [
                 Text(
-                  '${_currentVariant!.originalPrice.toInt()}đ',
+                  CurrencyUtils.formatVND(_currentVariant!.originalPrice),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 16,
@@ -1248,7 +1308,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
           ],
           Text(
-            '${_currentVariant!.discountedPrice.toInt()}đ',
+            CurrencyUtils.formatVND(_currentVariant!.discountedPrice),
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 24,
@@ -1424,6 +1484,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildVariantSelection() {
     if (_filteredVariants.length <= 1) return SizedBox.shrink();
 
@@ -1495,6 +1556,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildElderlySelection() {
     return Container(
       margin: EdgeInsets.symmetric(
@@ -1897,7 +1959,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🔗 Sản phẩm liên quan',
+            '🔗 Sản phẩm tương tự',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 18,
@@ -1906,26 +1968,143 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.shopping_bag_outlined,
-                  size: ResponsiveHelper.getIconSize(context, 64),
+          if (_isLoadingRelated)
+            Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+              ),
+            )
+          else if (_relatedErrorMessage != null)
+            Center(
+              child: Text(
+                _relatedErrorMessage!,
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 14,
+                  color: AppColors.error,
+                ),
+              ),
+            )
+          else if (_relatedProducts.isEmpty)
+            Center(
+              child: Text(
+                'Chưa có sản phẩm tương tự',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 16,
                   color: AppColors.grey,
                 ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                Text(
-                  'Chưa có sản phẩm liên quan',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 16,
-                    color: AppColors.grey,
-                  ),
-                ),
-              ],
+              ),
+            )
+          else
+            SizedBox(
+              height: 210,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getSpacing(context)),
+                itemCount: _relatedProducts.length,
+                separatorBuilder: (_, __) => SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                itemBuilder: (context, index) {
+                  final item = _relatedProducts[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailPage(productId: item['id']),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Image area
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                            child: Container(
+                              height: 100,
+                              width: double.infinity,
+                              color: AppColors.grey.withOpacity(0.08),
+                              child: item['imageUrl'] != null && (item['imageUrl'] as String).isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: item['imageUrl'],
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                        ),
+                                      ),
+                                      errorWidget: (context, url, error) => Center(
+                                        child: Icon(Icons.info_outline_rounded, color: AppColors.grey),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Icon(Icons.info_outline_rounded, color: AppColors.grey),
+                                    ),
+                            ),
+                          ),
+                          // Info area
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['name'] ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: ResponsiveHelper.responsiveTextStyle(
+                                      context: context,
+                                      baseSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.text,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    CurrencyUtils.formatVND((item['price'] ?? 0) as int),
+                                    style: ResponsiveHelper.responsiveTextStyle(
+                                      context: context,
+                                      baseSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1949,6 +2128,44 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Show message when styles are not fully selected
+          if (!_areAllStylesSelected && _productDetail?.styles.isNotEmpty == true)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+              margin: EdgeInsets.only(bottom: ResponsiveHelper.getSpacing(context)),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(
+                  ResponsiveHelper.getBorderRadius(context),
+                ),
+                border: Border.all(
+                  color: AppColors.secondary.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: AppColors.secondary,
+                    size: ResponsiveHelper.getIconSize(context, 16),
+                  ),
+                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                  Expanded(
+                    child: Text(
+                      'Vui lòng chọn đầy đủ các tùy chọn sản phẩm để thêm vào giỏ hàng',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 14,
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Video consultation button
           SizedBox(
             width: double.infinity,
@@ -1994,15 +2211,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 child: OutlinedButton(
                   key: _addToCartButtonKey,
                   onPressed:
-                      _currentVariant!.stock > 0
+                      _canAddToCart
                           ? () async {
                            log('Add to cart');
                             await _addToCart();
                           }
                           : null,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary),
+                    foregroundColor: _canAddToCart ? AppColors.primary : AppColors.grey,
+                    side: BorderSide(color: _canAddToCart ? AppColors.primary : AppColors.grey),
                     padding: EdgeInsets.symmetric(
                       vertical: ResponsiveHelper.getLargeSpacing(context),
                     ),
@@ -2032,48 +2249,48 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ),
                 ),
               ),
-              SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed:
-                      _currentVariant!.stock > 0
-                          ? () {
-                            _buyNow();
-                          }
-                          : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      vertical: ResponsiveHelper.getLargeSpacing(context),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        ResponsiveHelper.getBorderRadius(context),
-                      ),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.flash_on,
-                        size: ResponsiveHelper.getIconSize(context, 20),
-                      ),
-                      SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                      Text(
-                        'Mua ngay',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+              // Expanded(
+              //   child: ElevatedButton(
+              //     onPressed:
+              //         _currentVariant!.stock > 0
+              //             ? () {
+              //               _buyNow();
+              //             }
+              //             : null,
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: AppColors.primary,
+              //       foregroundColor: Colors.white,
+              //       padding: EdgeInsets.symmetric(
+              //         vertical: ResponsiveHelper.getLargeSpacing(context),
+              //       ),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(
+              //           ResponsiveHelper.getBorderRadius(context),
+              //         ),
+              //       ),
+              //       elevation: 0,
+              //     ),
+              //     child: Row(
+              //       mainAxisAlignment: MainAxisAlignment.center,
+              //       children: [
+              //         Icon(
+              //           Icons.flash_on,
+              //           size: ResponsiveHelper.getIconSize(context, 20),
+              //         ),
+              //         SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              //         Text(
+              //           'Mua ngay',
+              //           style: ResponsiveHelper.responsiveTextStyle(
+              //             context: context,
+              //             baseSize: 16,
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ],

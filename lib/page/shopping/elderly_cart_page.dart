@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../models/cart_get_response.dart';
 import '../../network/service/cart_service.dart';
 import '../../injection.dart';
@@ -56,7 +57,7 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
         });
       } else {
         setState(() {
-          _errorMessage = result.message ?? 'Không thể tải giỏ hàng';
+          _errorMessage = null;
           _isLoading = false;
         });
       }
@@ -624,7 +625,7 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
                 
                 // Price
                 Text(
-                  '${item['price']}đ',
+                  CurrencyUtils.formatVND(item['price']),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 22,
@@ -689,7 +690,7 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
                   ),
                 ),
                 Text(
-                  '${total.toInt()}đ',
+                  CurrencyUtils.formatVND(total),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 28,

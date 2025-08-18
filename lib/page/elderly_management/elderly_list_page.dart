@@ -974,11 +974,7 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-       leading: GestureDetector(
-        onTap: () {
-          Navigator.pop(context);
-        },
-        child: Icon(Icons.arrow_back_ios, color: Colors.grey,)),
+     
         title: Text(
           '👥 Quản lý người thân',
           style: ResponsiveHelper.responsiveTextStyle(

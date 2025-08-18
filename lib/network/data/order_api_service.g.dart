@@ -101,7 +101,7 @@ class _OrderApiService implements OrderApiService {
     )
         .compose(
           _dio.options,
-          '/api/Test/CreateOrder',
+          '/api/Order/VnPay',
           queryParameters: queryParameters,
           data: _data,
         )

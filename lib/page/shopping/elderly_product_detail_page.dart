@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../models/product_detail_response.dart';
 import '../../models/cart_replace_request.dart';
 
@@ -266,12 +267,12 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
       final hasDiscount = _currentVariant!.discount > 0;
       if (hasDiscount) {
         await _speechService.speakPriceInfo(
-          '${_currentVariant!.originalPrice.toInt()}',
-          '${_currentVariant!.discountedPrice.toInt()}',
+          CurrencyUtils.formatVND(_currentVariant!.originalPrice, withSymbol: false),
+          CurrencyUtils.formatVND(_currentVariant!.discountedPrice, withSymbol: false),
           '${_currentVariant!.discount}',
         );
       } else {
-        await _speechService.speak('Giá sản phẩm: ${_currentVariant!.discountedPrice.toInt()} đồng');
+        await _speechService.speak('Giá sản phẩm: ${CurrencyUtils.formatVND(_currentVariant!.discountedPrice)}');
       }
     }
   }
@@ -882,7 +883,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                   ),
                 ),
                 Text(
-                  '${_currentVariant!.originalPrice.toInt()}đ',
+                  CurrencyUtils.formatVND(_currentVariant!.originalPrice),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 20,
@@ -940,7 +941,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
                 Text(
-                  '${_currentVariant!.discountedPrice.toInt()}đ',
+                  CurrencyUtils.formatVND(_currentVariant!.discountedPrice),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 36,
@@ -1121,7 +1122,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                             Row(
                               children: [
                                 Text(
-                                  '${price.toStringAsFixed(0)}đ',
+                                  CurrencyUtils.formatVND(price),
                                   style: ResponsiveHelper.responsiveTextStyle(
                                     context: context,
                                     baseSize: 16,
@@ -1132,7 +1133,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                                 if (originalPrice > price) ...[
                                   SizedBox(width: ResponsiveHelper.getSpacing(context)),
                                   Text(
-                                    '${originalPrice.toStringAsFixed(0)}đ',
+                                    CurrencyUtils.formatVND(originalPrice),
                                     style: ResponsiveHelper.responsiveTextStyle(
                                       context: context,
                                       baseSize: 14,
@@ -1143,7 +1144,10 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                                   ),
                                 ],
                                 Spacer(),
-                                Container(
+                               
+                              ],
+                            ),
+                             Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: ResponsiveHelper.getSpacing(context),
                                     vertical: 4,
@@ -1162,8 +1166,6 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
                           ],
                         ),
                       ),
@@ -1822,9 +1824,9 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
         return;
       }
 
-      // Step 1: Load current cart
-      log('Loading current cart for user: $userId');
-      final cartResult = await _cartService.getCartByCustomerId(userId, 0);
+      // Step 1: Load current cart (elder)
+      log('Loading current cart for elder: $userId');
+      final cartResult = await _cartService.getCartByElderId(userId, 0);
       
       List<CartItem> updatedItems = [];
       

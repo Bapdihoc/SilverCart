@@ -1,17 +1,16 @@
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:silvercart/page/shopping/product_detail_page.dart';
 import 'package:silvercart/page/shopping/shopping_cart_page.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../injection.dart';
-import '../../models/product_response.dart';
-import '../../models/category_list_response.dart';
 import '../../models/root_category_response.dart';
 import '../../models/product_search_request.dart';
+import '../../models/product_search_response.dart';
 import '../../network/service/product_service.dart';
 import '../../network/service/category_service.dart';
 
@@ -35,10 +34,10 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   final GlobalKey _cartIconKey = GlobalKey();
   final Map<String, GlobalKey> _productButtonKeys = {};
 
-  // Hard code data
-  List<Map<String, dynamic>> _products = [];
-  List<Map<String, dynamic>> _filteredProducts = [];
-  bool _isLoading = false;
+  // API products - using SearchProductItem structure
+  List<SearchProductItem> _products = [];
+  List<SearchProductItem> _filteredProducts = [];
+  bool _isLoadingProducts = false;
 
   // API categories - now multi-level
   List<RootCategory> _rootCategories = [];
@@ -48,8 +47,6 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   bool _isLoadingSubCategories = false;
   late final CategoryService _categoryService;
   late final ProductService _productService;
-
-
 
   final List<String> _sortOptions = [
     'Mới nhất',
@@ -88,6 +85,22 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
 
     _loadCategories();
     _searchProductsByCategory(); // Load all products initially
+  }
+
+  // Consistent image error/empty placeholder with info icon
+  Widget _buildImageErrorPlaceholder(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: AppColors.grey.withOpacity(0.08),
+      child: Center(
+        child: Icon(
+          Icons.info_outline_rounded,
+          color: AppColors.grey,
+          size: ResponsiveHelper.getIconSize(context, 36),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadCategories() async {
@@ -214,7 +227,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
 
   Future<void> _searchProductsByCategory({String? categoryId, String? keyword}) async {
     setState(() {
-      _isLoading = true;
+      _isLoadingProducts = true;
     });
 
     try {
@@ -227,12 +240,25 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       );
 
       // Call search API
-      final searchedProducts = await _productService.searchProductsForUI(searchRequest);
+      final result = await _productService.searchProducts(searchRequest);
       
-      setState(() {
-        _products = searchedProducts;
-        _filteredProducts = List.from(_products);
-      });
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _products = result.data!.data.items;
+          _filteredProducts = List.from(_products);
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Không thể tải sản phẩm'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        // Fallback to hardcoded products if API fails
+        _loadHardCodeProducts();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -247,135 +273,160 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingProducts = false;
         });
       }
     }
   }
 
   void _loadHardCodeProducts() {
+    // Convert hardcoded data to SearchProductItem format for consistency
     setState(() {
       _products = [
-        {
-          'id': '1',
-          'name': 'Táo đỏ Mỹ',
-          'emoji': '🍎',
-          'price': 85000,
-          'originalPrice': 120000,
-          'discount': 29,
-          'rating': 4.8,
-          'reviews': 156,
-          'category': '🍎 Thực phẩm',
-          'subCategory': 'Trái cây',
-          'description': 'Táo đỏ Mỹ tươi ngon, giòn ngọt, giàu vitamin',
-          'stock': 50,
-          'image': '🍎',
-        },
-        {
-          'id': '2',
-          'name': 'Vitamin D3 1000IU',
-          'emoji': '💊',
-          'price': 180000,
-          'originalPrice': 220000,
-          'discount': 18,
-          'rating': 4.6,
-          'reviews': 89,
-          'category': '💊 Thuốc & Sức khỏe',
-          'subCategory': 'Vitamin',
-          'description': 'Vitamin D3 hỗ trợ xương khớp, tăng cường miễn dịch',
-          'stock': 30,
-          'image': '💊',
-        },
-        {
-          'id': '3',
-          'name': 'Kem dưỡng ẩm',
-          'emoji': '🧴',
-          'price': 250000,
-          'originalPrice': 300000,
-          'discount': 17,
-          'rating': 4.7,
-          'reviews': 234,
-          'category': '🧴 Chăm sóc cá nhân',
-          'subCategory': 'Chăm sóc da',
-          'description': 'Kem dưỡng ẩm cho da khô, chống lão hóa',
-          'stock': 25,
-          'image': '🧴',
-        },
-        {
-          'id': '4',
-          'name': 'Nồi cơm điện',
-          'emoji': '🏠',
-          'price': 1200000,
-          'originalPrice': 1500000,
-          'discount': 20,
-          'rating': 4.5,
-          'reviews': 67,
-          'category': '🏠 Gia dụng',
-          'subCategory': 'Đồ dùng nhà bếp',
-          'description': 'Nồi cơm điện thông minh, tiết kiệm điện',
-          'stock': 15,
-          'image': '🏠',
-        },
-        {
-          'id': '5',
-          'name': 'Áo thun cotton',
-          'emoji': '👕',
-          'price': 150000,
-          'originalPrice': 200000,
-          'discount': 25,
-          'rating': 4.4,
-          'reviews': 123,
-          'category': '👕 Quần áo',
-          'subCategory': 'Áo',
-          'description': 'Áo thun cotton mềm mại, thoáng mát',
-          'stock': 40,
-          'image': '👕',
-        },
-        {
-          'id': '6',
-          'name': 'Điện thoại Samsung',
-          'emoji': '📱',
-          'price': 8500000,
-          'originalPrice': 10000000,
-          'discount': 15,
-          'rating': 4.9,
-          'reviews': 456,
-          'category': '📱 Điện tử',
-          'subCategory': 'Điện thoại',
-          'description': 'Điện thoại thông minh, camera chất lượng cao',
-          'stock': 8,
-          'image': '📱',
-        },
-        {
-          'id': '7',
-          'name': 'Cam sành',
-          'emoji': '🍊',
-          'price': 45000,
-          'originalPrice': 60000,
-          'discount': 25,
-          'rating': 4.6,
-          'reviews': 89,
-          'category': '🍎 Thực phẩm',
-          'subCategory': 'Trái cây',
-          'description': 'Cam sành ngọt mát, giàu vitamin C',
-          'stock': 60,
-          'image': '🍊',
-        },
-        {
-          'id': '8',
-          'name': 'Thuốc cảm cúm',
-          'emoji': '💊',
-          'price': 35000,
-          'originalPrice': 45000,
-          'discount': 22,
-          'rating': 4.3,
-          'reviews': 178,
-          'category': '💊 Thuốc & Sức khỏe',
-          'subCategory': 'Thuốc không kê đơn',
-          'description': 'Thuốc điều trị cảm cúm, giảm sốt',
-          'stock': 100,
-          'image': '💊',
-        },
+        SearchProductItem(
+          id: '1',
+          name: 'Táo đỏ Mỹ',
+          brand: 'Fresh Fruits',
+          price: 85000,
+          description: 'Táo đỏ Mỹ tươi ngon, giòn ngọt, giàu vitamin',
+          imageUrl: '', // Empty for hardcoded fallback
+          categories: [
+            SearchProductCategory(
+              id: '1',
+              code: '',
+              description: '',
+              label: '🍎 Thực phẩm',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '2',
+          name: 'Vitamin D3 1000IU',
+          brand: 'Health Plus',
+          price: 180000,
+          description: 'Vitamin D3 hỗ trợ xương khớp, tăng cường miễn dịch',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '2',
+              code: '',
+              description: '',
+              label: '💊 Thuốc & Sức khỏe',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '3',
+          name: 'Kem dưỡng ẩm',
+          brand: 'Beauty Care',
+          price: 250000,
+          description: 'Kem dưỡng ẩm cho da khô, chống lão hóa',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '3',
+              code: '',
+              description: '',
+              label: '🧴 Chăm sóc cá nhân',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '4',
+          name: 'Nồi cơm điện',
+          brand: 'HomeTech',
+          price: 1200000,
+          description: 'Nồi cơm điện thông minh, tiết kiệm điện',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '4',
+              code: '',
+              description: '',
+              label: '🏠 Gia dụng',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '5',
+          name: 'Áo thun cotton',
+          brand: 'Fashion Style',
+          price: 150000,
+          description: 'Áo thun cotton mềm mại, thoáng mát',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '5',
+              code: '',
+              description: '',
+              label: '👕 Quần áo',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '6',
+          name: 'Điện thoại Samsung',
+          brand: 'Samsung',
+          price: 8500000,
+          description: 'Điện thoại thông minh, camera chất lượng cao',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '6',
+              code: '',
+              description: '',
+              label: '📱 Điện tử',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '7',
+          name: 'Cam sành',
+          brand: 'Fresh Fruits',
+          price: 45000,
+          description: 'Cam sành ngọt mát, giàu vitamin C',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '7',
+              code: '',
+              description: '',
+              label: '🍎 Thực phẩm',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
+        SearchProductItem(
+          id: '8',
+          name: 'Thuốc cảm cúm',
+          brand: 'PharmaCare',
+          price: 35000,
+          description: 'Thuốc điều trị cảm cúm, giảm sốt',
+          imageUrl: '',
+          categories: [
+            SearchProductCategory(
+              id: '8',
+              code: '',
+              description: '',
+              label: '💊 Thuốc & Sức khỏe',
+              type: 0,
+              listOfValueId: '',
+            ),
+          ],
+        ),
       ];
       _filteredProducts = List.from(_products);
     });
@@ -388,8 +439,8 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       // Apply search filter
       if (_searchController.text.isNotEmpty) {
         filtered = filtered.where((product) {
-          final name = product['name'].toString().toLowerCase();
-          final description = product['description'].toString().toLowerCase();
+          final name = product.name.toLowerCase();
+          final description = product.description.toLowerCase();
           final query = _searchController.text.toLowerCase();
           return name.contains(query) || description.contains(query);
         }).toList();
@@ -398,14 +449,14 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       // Apply category filter
       if (_selectedCategory != 'Tất cả') {
         filtered = filtered.where((product) {
-          return product['category'] == _selectedCategory;
+          return product.categories.any((cat) => cat.label.contains(_selectedCategory));
         }).toList();
       }
       
       // Apply sub-category filter
       if (_selectedSubCategory.isNotEmpty && _selectedSubCategory != 'Tất cả') {
         filtered = filtered.where((product) {
-          return product['subCategory'] == _selectedSubCategory;
+          return product.categories.any((cat) => cat.label.contains(_selectedSubCategory));
         }).toList();
       }
       
@@ -416,19 +467,19 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     });
   }
 
-  List<Map<String, dynamic>> _sortProducts(List<Map<String, dynamic>> products) {
+  List<SearchProductItem> _sortProducts(List<SearchProductItem> products) {
     switch (_sortBy) {
       case 'Giá thấp - cao':
-        products.sort((a, b) => a['price'].compareTo(b['price']));
+        products.sort((a, b) => a.price.compareTo(b.price));
         break;
       case 'Giá cao - thấp':
-        products.sort((a, b) => b['price'].compareTo(a['price']));
+        products.sort((a, b) => b.price.compareTo(a.price));
         break;
       case 'Đánh giá cao':
-        products.sort((a, b) => b['rating'].compareTo(a['rating']));
+        // For now, keep original order since we don't have rating in API
         break;
       case 'Bán chạy':
-        products.sort((a, b) => b['reviews'].compareTo(a['reviews']));
+        // For now, keep original order since we don't have sales data in API
         break;
       default: // 'Mới nhất'
         // Keep original order for demo
@@ -510,31 +561,6 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                       MaterialPageRoute(builder: (context) => ShoppingCartPage()),
                     );
                   },
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '3',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 10,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -720,6 +746,33 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   }
 
   Widget _buildModernProductGrid() {
+    if (_isLoadingProducts) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: ResponsiveHelper.getIconSize(context, 40),
+              height: ResponsiveHelper.getIconSize(context, 40),
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+            Text(
+              'Đang tải sản phẩm...',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 16,
+                color: AppColors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_filteredProducts.isEmpty) {
       return Center(
         child: Column(
@@ -775,7 +828,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
         final product = _filteredProducts[index];
         
         // Create or get the GlobalKey for this product
-        final String productId = product['id'];
+        final String productId = product.id;
         if (!_productButtonKeys.containsKey(productId)) {
           _productButtonKeys[productId] = GlobalKey();
         }
@@ -786,7 +839,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
-  Widget _buildModernProductCard(Map<String, dynamic> product, GlobalKey buttonKey) {
+  Widget _buildModernProductCard(SearchProductItem product, GlobalKey buttonKey) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -807,7 +860,11 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Navigate to product detail
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ProductDetailPage(productId: product.id),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(20),
           child: Column(
@@ -827,47 +884,38 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                   ),
                   child: Stack(
                     children: [
-                      Center(
-                        child: Text(
-                          product['image'],
-                          style: TextStyle(
-                            fontSize: ResponsiveHelper.getIconSize(context, 48),
+                      // Product Image with proper handling
+                      if (product.imageUrl.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
                           ),
-                        ),
-                      ),
-                      if (product['discount'] != null)
-                        Positioned(
-                          top: ResponsiveHelper.getSpacing(context),
-                          right: ResponsiveHelper.getSpacing(context),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: ResponsiveHelper.getSpacing(context),
-                              vertical: ResponsiveHelper.getSpacing(context) / 2,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [AppColors.error, AppColors.error.withOpacity(0.8)],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.error.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                          child: CachedNetworkImage(
+                            imageUrl: product.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            placeholder: (context, url) => Container(
+                              color: AppColors.grey.withOpacity(0.1),
+                              child: Center(
+                                child: SizedBox(
+                                  width: ResponsiveHelper.getIconSize(context, 32),
+                                  height: ResponsiveHelper.getIconSize(context, 32),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ],
-                            ),
-                            child: Text(
-                              '-${product['discount']}%',
-                              style: ResponsiveHelper.responsiveTextStyle(
-                                context: context,
-                                baseSize: 10,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            errorWidget: (context, url, error) => _buildImageErrorPlaceholder(context),
                           ),
-                        ),
+                        )
+                      else
+                        _buildImageErrorPlaceholder(context),
+                      
+                      // Favorite button
                       Positioned(
                         top: ResponsiveHelper.getSpacing(context),
                         left: ResponsiveHelper.getSpacing(context),
@@ -903,7 +951,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      product['name'],
+                      product.name,
                       style: ResponsiveHelper.responsiveTextStyle(
                         context: context,
                         baseSize: 14,
@@ -914,33 +962,22 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.star_rounded,
-                          size: ResponsiveHelper.getIconSize(context, 12),
-                          color: Colors.amber,
+                    
+                    // Brand
+                    if (product.brand.isNotEmpty)
+                      Text(
+                        product.brand,
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 12,
+                          color: AppColors.grey,
                         ),
-                        SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                        Text(
-                          '${product['rating']}',
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 12,
-                            color: AppColors.grey,
-                          ),
-                        ),
-                        Text(
-                          ' (${product['reviews']})',
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 12,
-                            color: AppColors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    
                     SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                    
                     Row(
                       children: [
                         Expanded(
@@ -948,19 +985,8 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (product['originalPrice'] != null)
-                                Text(
-                                  '${product['originalPrice']}đ',
-                                  style: ResponsiveHelper.responsiveTextStyle(
-                                    context: context,
-                                    baseSize: 12,
-                                    color: AppColors.grey,
-                                  ).copyWith(
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
                               Text(
-                                '${product['price']}đ',
+                                CurrencyUtils.formatVND(product.price),
                                 style: ResponsiveHelper.responsiveTextStyle(
                                   context: context,
                                   baseSize: 14,
@@ -969,38 +995,6 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            key: buttonKey,
-                            icon: Icon(
-                              Icons.remove_red_eye,
-                              size: ResponsiveHelper.getIconSize(context, 16),
-                              color: Colors.white,
-                            ),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ProductDetailPage(productId: product['id']),
-                                ),
-                              );
-                            },
-                            padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-                            constraints: const BoxConstraints(),
                           ),
                         ),
                       ],
@@ -1015,7 +1009,22 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
-  void _startFlyToCartAnimation(Map<String, dynamic> product, GlobalKey buttonKey) {
+  // Helper method to get category emoji for fallback
+  String _getCategoryEmoji(List<SearchProductCategory> categories) {
+    if (categories.isEmpty) return '📦';
+    
+    final categoryName = categories.first.label.toLowerCase();
+    if (categoryName.contains('thực phẩm') || categoryName.contains('trái cây')) return '🍎';
+    if (categoryName.contains('thuốc') || categoryName.contains('sức khỏe')) return '💊';
+    if (categoryName.contains('chăm sóc') || categoryName.contains('cá nhân')) return '🧴';
+    if (categoryName.contains('gia dụng') || categoryName.contains('nhà bếp')) return '🏠';
+    if (categoryName.contains('quần áo') || categoryName.contains('áo')) return '👕';
+    if (categoryName.contains('điện tử') || categoryName.contains('điện thoại')) return '📱';
+    
+    return '📦';
+  }
+
+  void _startFlyToCartAnimation(SearchProductItem product, GlobalKey buttonKey) {
     // Get the RenderBox of the add to cart button
     final RenderBox? buttonBox = buttonKey.currentContext?.findRenderObject() as RenderBox?;
     final RenderBox? cartBox = _cartIconKey.currentContext?.findRenderObject() as RenderBox?;
@@ -1039,6 +1048,9 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     // Calculate distance
     final double deltaX = endX - startX;
     final double deltaY = endY - startY;
+
+    // Get category emoji for animation
+    final categoryEmoji = _getCategoryEmoji(product.categories);
 
     // Create overlay entry
     _overlayEntry = OverlayEntry(
@@ -1079,7 +1091,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                     ),
                     child: Center(
                       child: Text(
-                        product['emoji'],
+                        categoryEmoji,
                         style: TextStyle(
                           fontSize: 28,
                         ),
@@ -1125,7 +1137,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
               Expanded(
                 child: Text(
-                  'Đã thêm ${product['name']} vào giỏ hàng! 🎉',
+                  'Đã thêm ${product.name} vào giỏ hàng! 🎉',
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 14,
@@ -1157,7 +1169,8 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     });
   }
 
-  void _addToCart(Map<String, dynamic> product, GlobalKey buttonKey) {
+  // ignore: unused_element
+  void _addToCart(SearchProductItem product, GlobalKey buttonKey) {
     // Add haptic feedback
     HapticFeedback.lightImpact();
     
@@ -1276,6 +1289,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildCompactHeader() {
     if (_categoryPath.isEmpty) {
       // Root level - minimal title
@@ -1603,7 +1617,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     if (_categoryPath.isEmpty) return;
 
     // Remove current level from path
-    final removedCategory = _categoryPath.removeLast();
+    _categoryPath.removeLast();
 
     // Update main page state
     setState(() {
@@ -1684,6 +1698,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     return breadcrumbItems.join(' › ');
   }
 
+  // ignore: unused_element
   List<Widget> _buildBreadcrumbItems() {
     List<Widget> items = [];
     
@@ -1753,6 +1768,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildCurrentCategoryContent() {
     if (_isLoadingCategories) {
       return Center(
@@ -2027,6 +2043,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildSimpleSubCategories() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2071,6 +2088,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildSubCategoryChip(String label, bool isPrimary, VoidCallback onTap, {bool hasChildren = false}) {
     return GestureDetector(
       onTap: onTap,
@@ -2110,6 +2128,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildBreadcrumb() {
     return Container(
       padding: EdgeInsets.symmetric(
@@ -2183,6 +2202,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // ignore: unused_element
   Widget _buildSubCategories() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

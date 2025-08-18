@@ -34,6 +34,9 @@ dependencies:
   path_provider: ^2.1.5
   device_info_plus: ^11.5.0
   mobile_scanner: ^7.0.1
+  url_launcher:
+  app_links: ^3.5.0
+  cached_network_image: ^3.3.1
 
 dev_dependencies: 
   flutter_lints: ^5.0.0

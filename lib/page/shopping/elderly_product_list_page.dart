@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 
 class ElderlyProductListPage extends StatefulWidget {
   final String categoryTitle;
@@ -621,7 +622,7 @@ class _ElderlyProductListPageState extends State<ElderlyProductListPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          '${product['price'].toStringAsFixed(0)}đ',
+                          CurrencyUtils.formatVND(product['price']),
                           style: ResponsiveHelper.responsiveTextStyle(
                             context: context,
                             baseSize: 20,
@@ -630,9 +631,9 @@ class _ElderlyProductListPageState extends State<ElderlyProductListPage> {
                           ),
                         ),
                       ),
-                      if (product['discount'] > 0) ...[
+                      if ((product['discount'] ?? 0) > 0 && product['originalPrice'] != null) ...[
                         Text(
-                          '${product['originalPrice'].toStringAsFixed(0)}đ',
+                          CurrencyUtils.formatVND(product['originalPrice']),
                           style: ResponsiveHelper.responsiveTextStyle(
                             context: context,
                             baseSize: 16,

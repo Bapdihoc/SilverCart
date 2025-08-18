@@ -36,7 +36,7 @@ abstract class OrderApiService {
   @GET('/api/Order/{id}')
   Future<OrderResponse> getOrder(@Path('id') int id);
 
-  @POST('/api/Test/CreateOrder')
+  @POST('/api/Order/VnPay')
   Future<CreateOrderResponse> createOrder(@Body() CreateOrderRequest request);
 
   @GET('/api/Order/user')

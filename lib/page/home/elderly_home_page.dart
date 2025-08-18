@@ -166,29 +166,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     );
                   },
                 ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '3',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 10,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+               
               ],
             ),
           ),

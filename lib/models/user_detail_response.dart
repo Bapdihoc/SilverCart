@@ -45,7 +45,7 @@ class UserDetailData {
     required this.userName,
     this.email,
     this.avatar,
-    required this.gender,
+     this.gender = 0,
     this.phoneNumber,
     required this.birthDate,
     required this.age,

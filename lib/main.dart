@@ -1,9 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:silvercart/env.dart';
 import 'package:silvercart/injection.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
+import 'package:app_links/app_links.dart';
+import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +25,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isElderlyMode = false; // Có thể lấy từ SharedPreferences
+  StreamSubscription<Uri>? _sub;
+  AppLinks? _appLinks;
 
   void _toggleElderlyMode() {
     setState(() {
@@ -47,5 +53,33 @@ class _MyAppState extends State<MyApp> {
         );
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _appLinks = AppLinks();
+    _handleInitialUri();
+    _sub = _appLinks!.uriLinkStream.listen((uri) {
+      if (uri.path == '/payment/callback') {
+        log('uri: $uri');
+        AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+      }
+    }, onError: (err) {});
+  }
+
+  Future<void> _handleInitialUri() async {
+    try {
+      final uri = await _appLinks?.getInitialAppLink();
+      if (uri != null && uri.path == '/payment/callback') {
+        AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }

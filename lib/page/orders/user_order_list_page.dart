@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/user_order_response.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../network/service/order_service.dart';
 import '../../injection.dart';
+import 'order_detail_page.dart';
 
 class UserOrderListPage extends StatefulWidget {
   const UserOrderListPage({super.key});
@@ -287,7 +289,9 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
               ],
             ),
             child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                Navigator.of(context).pop(); // Go back to shopping
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
@@ -355,244 +359,284 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
           width: 1,
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with order ID and status
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Đơn hàng #${order.id.substring(0, 8)}',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                      if (order.elderName.isNotEmpty)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.person_rounded,
-                              size: 16,
-                              color: AppColors.secondary,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              order.elderName,
-                              style: ResponsiveHelper.responsiveTextStyle(
-                                context: context,
-                                baseSize: 14,
-                                color: AppColors.secondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                _buildStatusChip(order),
-              ],
-            ),
-            
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            
-            // Order details
-            Container(
-              padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.grey.withOpacity(0.1),
-                  width: 1,
-                ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => OrderDetailPage(order: order),
               ),
-              child: Column(
-                children: order.orderDetails.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final detail = entry.value;
-                  return Column(
-                    children: [
-                      if (index > 0) Divider(color: Colors.grey.withOpacity(0.2)),
-                      Row(
+            );
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                    child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Compact header with order ID and status
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Text(
+                            '#${order.id.substring(0, 8).toUpperCase()}',
+                            style: ResponsiveHelper.responsiveTextStyle(
+                              context: context,
+                              baseSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          if (order.elderName.isNotEmpty) ...[
+                            SizedBox(height: 4),
+                            Row(
                               children: [
-                                Text(
-                                  detail.productName,
-                                  style: ResponsiveHelper.responsiveTextStyle(
-                                    context: context,
-                                    baseSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.text,
+                                Icon(
+                                  Icons.elderly_rounded,
+                                  size: 14,
+                                  color: AppColors.secondary,
+                                ),
+                                SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    order.elderName,
+                                    style: ResponsiveHelper.responsiveTextStyle(
+                                      context: context,
+                                      baseSize: 13,
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    _buildCompactStatusChip(order),
+                  ],
+                ),
+                
+                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+                
+                // Compact product summary
+                Container(
+                  padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFF8F9FA),
+                        Colors.white,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Product count and total
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ResponsiveHelper.getSpacing(context),
+                              vertical: ResponsiveHelper.getSpacing(context) / 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.shopping_bag_outlined,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                                SizedBox(width: 4),
                                 Text(
-                                  '${detail.price.toInt()}đ x ${detail.quantity}',
+                                  '${order.orderDetails.length}',
                                   style: ResponsiveHelper.responsiveTextStyle(
                                     context: context,
                                     baseSize: 12,
-                                    color: AppColors.grey,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          const Spacer(),
                           Text(
-                            '${(detail.price * detail.quantity).toInt()}đ',
+                            CurrencyUtils.formatVND(order.totalPrice),
                             style: ResponsiveHelper.responsiveTextStyle(
                               context: context,
-                              baseSize: 14,
+                              baseSize: 18,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                             ),
                           ),
                         ],
                       ),
+                      
+                      if (order.orderDetails.isNotEmpty) ...[
+                        SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                        Divider(color: Colors.grey.withOpacity(0.2)),
+                        SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                        
+                        // Show first 2 products
+                        ...order.orderDetails.take(2).map((detail) => 
+                          Padding(
+                            padding: EdgeInsets.only(bottom: ResponsiveHelper.getSpacing(context) / 2),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    detail.productName,
+                                    style: ResponsiveHelper.responsiveTextStyle(
+                                      context: context,
+                                      baseSize: 13,
+                                      color: AppColors.text,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  'x${detail.quantity}',
+                                  style: ResponsiveHelper.responsiveTextStyle(
+                                    context: context,
+                                    baseSize: 12,
+                                    color: AppColors.grey,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                        
+                        // Show more indicator if needed
+                        if (order.orderDetails.length > 2)
+                          Container(
+                            padding: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context) / 2),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.more_horiz_rounded,
+                                  size: 16,
+                                  color: AppColors.grey,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'và ${order.orderDetails.length - 2} sản phẩm khác',
+                                  style: ResponsiveHelper.responsiveTextStyle(
+                                    context: context,
+                                    baseSize: 12,
+                                    color: AppColors.grey,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 12,
+                                  color: AppColors.primary,
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ],
-                  );
-                }).toList(),
-              ),
-            ),
-            
-            if (order.note.isNotEmpty) ...[
-              SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-              Container(
-                padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.warning.withOpacity(0.3),
-                    width: 1,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.note_rounded,
-                      size: 16,
-                      color: AppColors.warning,
-                    ),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                    Expanded(
-                      child: Text(
-                        order.note,
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 14,
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.w600,
-                        ),
+                
+                // Note section if exists
+                if (order.note.isNotEmpty) ...[
+                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                  Container(
+                    padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withOpacity(0.2),
+                        width: 1,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-            
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            
-            // Total price
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveHelper.getSpacing(context),
-                vertical: ResponsiveHelper.getSpacing(context) / 2,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary.withOpacity(0.1), AppColors.primary.withOpacity(0.05)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.payments_rounded,
-                    size: 20,
-                    color: AppColors.primary,
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                  Text(
-                    'Tổng tiền:',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${order.totalPrice.toInt()}đ',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.note_rounded,
+                          size: 14,
+                          color: AppColors.warning,
+                        ),
+                        SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                        Expanded(
+                          child: Text(
+                            order.note,
+                            style: ResponsiveHelper.responsiveTextStyle(
+                              context: context,
+                              baseSize: 12,
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            ),
           ],
+        ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(UserOrderData order) {
+  Widget _buildCompactStatusChip(UserOrderData order) {
     Color chipColor;
     Color textColor;
-    IconData icon;
     
     switch (order.orderStatus) {
       case 0: // Created
         chipColor = Colors.blue.withOpacity(0.1);
         textColor = Colors.blue;
-        icon = Icons.receipt_rounded;
         break;
       case 1: // Paid
         chipColor = Colors.orange.withOpacity(0.1);
         textColor = Colors.orange;
-        icon = Icons.payment_rounded;
         break;
       case 2: // Shipping
         chipColor = Colors.purple.withOpacity(0.1);
         textColor = Colors.purple;
-        icon = Icons.local_shipping_rounded;
         break;
       case 3: // Completed
         chipColor = AppColors.success.withOpacity(0.1);
         textColor = AppColors.success;
-        icon = Icons.check_circle_rounded;
         break;
       case 4: // Failed
         chipColor = AppColors.error.withOpacity(0.1);
         textColor = AppColors.error;
-        icon = Icons.error_rounded;
         break;
       default:
         chipColor = AppColors.grey.withOpacity(0.1);
         textColor = AppColors.grey;
-        icon = Icons.help_rounded;
     }
     
     return Container(
@@ -602,32 +646,23 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
       ),
       decoration: BoxDecoration(
         color: chipColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: textColor.withOpacity(0.3),
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: textColor,
-          ),
-          SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-          Text(
-            order.orderStatusText,
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 12,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-        ],
+      child: Text(
+        order.orderStatusText,
+        style: ResponsiveHelper.responsiveTextStyle(
+          context: context,
+          baseSize: 12,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }
+
+
 }

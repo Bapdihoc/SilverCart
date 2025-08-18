@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/utils/currency_utils.dart';
 import '../../models/cart_get_response.dart';
 import '../../models/cart_replace_request.dart';
 import '../../models/user_detail_response.dart';
@@ -14,6 +15,8 @@ import '../../network/service/elder_service.dart';
 import '../../network/service/order_service.dart';
 import '../../models/create_order_request.dart';
 import '../../injection.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 class ShoppingCartPage extends StatefulWidget {
   const ShoppingCartPage({super.key});
@@ -1006,46 +1009,46 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getSpacing(context),
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppColors.secondary.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.person_rounded,
-                        size: 12,
-                        color: AppColors.secondary,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        item['elderly'],
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 10,
-                          color: AppColors.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Container(
+                //   padding: EdgeInsets.symmetric(
+                //     horizontal: ResponsiveHelper.getSpacing(context),
+                //     vertical: 2,
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: AppColors.secondary.withOpacity(0.1),
+                //     borderRadius: BorderRadius.circular(8),
+                //     border: Border.all(
+                //       color: AppColors.secondary.withOpacity(0.3),
+                //       width: 1,
+                //     ),
+                //   ),
+                //   child: Row(
+                //     mainAxisSize: MainAxisSize.min,
+                //     children: [
+                //       Icon(
+                //         Icons.person_rounded,
+                //         size: 12,
+                //         color: AppColors.secondary,
+                //       ),
+                //       SizedBox(width: 4),
+                //       Text(
+                //         item['elderly'],
+                //         style: ResponsiveHelper.responsiveTextStyle(
+                //           context: context,
+                //           baseSize: 10,
+                //           color: AppColors.secondary,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
                 Row(
                   children: [
                     if (item['originalPrice'] != null) ...[
                       Text(
-                        '${item['originalPrice']}đ',
+                        CurrencyUtils.formatVND(item['originalPrice']),
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 12,
@@ -1057,7 +1060,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
                     ],
                     Text(
-                      '${item['price']}đ',
+                      CurrencyUtils.formatVND(item['price']),
                       style: ResponsiveHelper.responsiveTextStyle(
                         context: context,
                         baseSize: 14,
@@ -1441,7 +1444,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                         SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
                         Expanded(
                           child: Text(
-                            'COD',
+                            'VNPAY',
                             style: ResponsiveHelper.responsiveTextStyle(
                               context: context,
                               baseSize: 12,
@@ -1489,7 +1492,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                         SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
                         Expanded(
                           child: Text(
-                            'Online',
+                            'PAYOS',
                             style: ResponsiveHelper.responsiveTextStyle(
                               context: context,
                               baseSize: 12,
@@ -1665,10 +1668,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          _buildModernSummaryRow('Tạm tính', '${subtotal.toInt()}đ'),
-          _buildModernSummaryRow('Phí vận chuyển', '${shipping.toInt()}đ'),
+          _buildModernSummaryRow('Tạm tính', CurrencyUtils.formatVND(subtotal)),
+          _buildModernSummaryRow('Phí vận chuyển', CurrencyUtils.formatVND(shipping)),
           if (discount > 0)
-            _buildModernSummaryRow('Giảm giá', '-${discount.toInt()}đ', color: AppColors.success),
+            _buildModernSummaryRow('Giảm giá', '-${CurrencyUtils.formatVND(discount)}', color: AppColors.success),
           Container(
             margin: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context)),
             height: 1,
@@ -1676,7 +1679,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           ),
           _buildModernSummaryRow(
             'Tổng cộng',
-            '${total.toInt()}đ',
+            CurrencyUtils.formatVND(total),
             isTotal: true,
           ),
         ],
@@ -2278,23 +2281,28 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         addressId: _selectedAddressId!,
       );
 
+      await _cartService.changeCartStatus(_cartData!.cartId, 1);
       // Call create order API
       final result = await _orderService.createOrder(createOrderRequest);
-
+      final String? paymentUrl  = result.data?.data;
       // Close loading dialog
       Navigator.of(context).pop();
 
-      if (result.isSuccess) {
-        // Show success dialog
-        _showSuccessDialog(result.data?.message ?? 'Đặt hàng thành công!');
+      if (paymentUrl != null) {
+        final uri = Uri.parse(paymentUrl);
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // Wait for callback result
+        final status = await context.push('/payment/callback');
+        if (status == 'success') {
+          _showSuccessDialog('Thanh toán thành công!');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Thanh toán thất bại hoặc bị hủy'), backgroundColor: AppColors.error),
+          );
+        }
       } else {
-        // Show error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Không thể tạo đơn hàng'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        // Fallback: no payment url, show success immediately
+        _showSuccessDialog(result.data?.message ?? 'Đặt hàng thành công!');
       }
     } catch (e) {
       // Close loading dialog
@@ -2309,6 +2317,8 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       );
     }
   }
+
+  
 
   void _showSuccessDialog(String message) {
     showDialog(
