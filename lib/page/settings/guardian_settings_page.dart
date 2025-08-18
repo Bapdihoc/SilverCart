@@ -211,7 +211,7 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
               icon: '📱',
               title: 'Thông tin cá nhân',
               subtitle: 'Cập nhật thông tin cá nhân',
-              onTap: () {},
+              onTap: () => context.push('/user-profile'),
             ),
             _buildSettingsItem(
               icon: '🔔',

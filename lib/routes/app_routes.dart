@@ -5,6 +5,7 @@ import 'package:silvercart/page/auth/role_selection_page.dart';
 import 'package:silvercart/page/auth/login_page.dart';
 import 'package:silvercart/page/auth/elderly_login_page.dart';
 import 'package:silvercart/page/auth/register_page.dart';
+import 'package:silvercart/page/settings/user_profile_page.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -49,6 +50,10 @@ class AppRouter {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/user-profile',
+        builder: (context, state) => const UserProfilePage(),
       ),
       GoRoute(
         path: '/payment/callback',
