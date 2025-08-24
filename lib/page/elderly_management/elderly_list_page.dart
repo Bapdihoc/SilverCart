@@ -134,11 +134,12 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
   }
 
   Future<void> _navigateToAddElderly() async {
-    Navigator.of(context).push(
+   await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ElderlyProfileFormPage(),
       ),
     );
+    _loadElderly();
   }
 
   Future<void> _navigateToElderlyDetail(Elderly elderly) async {
@@ -1103,58 +1104,58 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
                       SizedBox(height: ResponsiveHelper.getSpacing(context)),
 
                       // Compact Filter Chips
-                      SizedBox(
-                        height: 36,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _filterOptions.length,
-                          separatorBuilder: (context, index) => 
-                              SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                          itemBuilder: (context, index) {
-                            final filter = _filterOptions[index];
-                            final isSelected = _selectedFilter == filter['value'];
+                      // SizedBox(
+                      //   height: 36,
+                      //   child: ListView.separated(
+                      //     scrollDirection: Axis.horizontal,
+                      //     itemCount: _filterOptions.length,
+                      //     separatorBuilder: (context, index) => 
+                      //         SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                      //     itemBuilder: (context, index) {
+                      //       final filter = _filterOptions[index];
+                      //       final isSelected = _selectedFilter == filter['value'];
                             
-                            return GestureDetector(
-                              onTap: () => _onFilterChanged(filter['value']),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: ResponsiveHelper.getSpacing(context),
-                                  vertical: ResponsiveHelper.getSpacing(context) / 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.primary : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: isSelected ? AppColors.primary : AppColors.grey.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      filter['icon'],
-                                      size: 14,
-                                      color: isSelected ? Colors.white : AppColors.primary,
-                                    ),
-                                    SizedBox(width: ResponsiveHelper.getSpacing(context) / 3),
-                                    Text(
-                                      filter['label'],
-                                      style: ResponsiveHelper.responsiveTextStyle(
-                                        context: context,
-                                        baseSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected ? Colors.white : AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                      //       return GestureDetector(
+                      //         onTap: () => _onFilterChanged(filter['value']),
+                      //         child: AnimatedContainer(
+                      //           duration: const Duration(milliseconds: 200),
+                      //           padding: EdgeInsets.symmetric(
+                      //             horizontal: ResponsiveHelper.getSpacing(context),
+                      //             vertical: ResponsiveHelper.getSpacing(context) / 2,
+                      //           ),
+                      //           decoration: BoxDecoration(
+                      //             color: isSelected ? AppColors.primary : Colors.transparent,
+                      //             borderRadius: BorderRadius.circular(18),
+                      //             border: Border.all(
+                      //               color: isSelected ? AppColors.primary : AppColors.grey.withOpacity(0.3),
+                      //               width: 1,
+                      //             ),
+                      //           ),
+                      //           child: Row(
+                      //             mainAxisSize: MainAxisSize.min,
+                      //             children: [
+                      //               Icon(
+                      //                 filter['icon'],
+                      //                 size: 14,
+                      //                 color: isSelected ? Colors.white : AppColors.primary,
+                      //               ),
+                      //               SizedBox(width: ResponsiveHelper.getSpacing(context) / 3),
+                      //               Text(
+                      //                 filter['label'],
+                      //                 style: ResponsiveHelper.responsiveTextStyle(
+                      //                   context: context,
+                      //                   baseSize: 12,
+                      //                   fontWeight: FontWeight.w600,
+                      //                   color: isSelected ? Colors.white : AppColors.primary,
+                      //                 ),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         ),
+                      //       );
+                      //     },
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

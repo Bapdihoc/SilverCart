@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:silvercart/network/service/auth_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../network/service/agora_service.dart';
@@ -10,11 +13,8 @@ import '../../injection.dart';
 
 class VideoCallPage extends StatefulWidget {
   final String productName;
-  
-  const VideoCallPage({
-    super.key,
-    required this.productName,
-  });
+
+  const VideoCallPage({super.key, required this.productName});
 
   @override
   State<VideoCallPage> createState() => _VideoCallPageState();
@@ -23,7 +23,7 @@ class VideoCallPage extends StatefulWidget {
 class _VideoCallPageState extends State<VideoCallPage> {
   final TextEditingController _channelController = TextEditingController();
   final AgoraService _agoraService = getIt<AgoraService>();
-  
+
   String? _channelName;
   bool _localUserJoined = false;
   int? _remoteUid;
@@ -31,108 +31,159 @@ class _VideoCallPageState extends State<VideoCallPage> {
   bool _isVideoMuted = false;
   bool _isConnecting = false;
   bool _isSpeaking = false;
-  
+  String? _userId;
+  final AuthService authService = getIt<AuthService>();
+
   @override
   void initState() {
     super.initState();
     _initializeAgora();
-    
+
     // Set default channel name
-    _channelController.text = 'call_i3050';
+    _channelController.text = 'abc';
+    _getAgoraTokenOnInit();
   }
-  
+
   @override
   void dispose() {
     _agoraService.dispose();
     _channelController.dispose();
     super.dispose();
   }
-  
+
+  Future<void> _getAgoraTokenOnInit() async {
+    log('message 235');
+    _userId = await authService.getUserId() ?? '';
+    _channelController.text = 'call_$_userId';
+  }
+
   Future<void> _initializeAgora() async {
     // Initialize Agora engine
     final initialized = await _agoraService.initialize();
     if (!initialized) {
-      _showErrorSnackBar('Không thể khởi tạo video call. Vui lòng kiểm tra quyền camera và microphone.');
+      _showErrorSnackBar(
+        'Không thể khởi tạo video call. Vui lòng kiểm tra quyền camera và microphone.',
+      );
       return;
     }
-    
+
     // Register event handlers
-    _agoraService.registerEventHandler(RtcEngineEventHandler(
-      onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-        log('✅ Joined channel: ${connection.channelId}');
-        setState(() {
-          _localUserJoined = true;
-          _isConnecting = false;
-        });
-        _showSuccessSnackBar('Đã kết nối thành công!');
-      },
-      onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-        log('👤 Remote user joined: $remoteUid');
-        setState(() {
-          _remoteUid = remoteUid;
-        });
-        _showSuccessSnackBar('Chuyên viên tư vấn đã tham gia cuộc gọi');
-      },
-      onUserOffline: (RtcConnection connection, int remoteUid, UserOfflineReasonType reason) {
-        log('👤 Remote user left: $remoteUid, reason: $reason');
-        setState(() {
-          _remoteUid = null;
-        });
-        _showInfoSnackBar('Chuyên viên tư vấn đã rời khỏi cuộc gọi');
-      },
-      onConnectionStateChanged: (RtcConnection connection, ConnectionStateType state, ConnectionChangedReasonType reason) {
-        log('🔗 Connection state changed: $state, reason: $reason');
-        if (state == ConnectionStateType.connectionStateFailed) {
-          _showErrorSnackBar('Kết nối thất bại. Vui lòng thử lại.');
+    _agoraService.registerEventHandler(
+      RtcEngineEventHandler(
+        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          log('✅ Joined channel: ${connection.channelId}');
+          setState(() {
+            _localUserJoined = true;
+            _isConnecting = false;
+          });
+          _showSuccessSnackBar('Đã kết nối thành công!');
+        },
+        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+          log('👤 Remote user joined: $remoteUid');
+          setState(() {
+            _remoteUid = remoteUid;
+          });
+          _showSuccessSnackBar('Chuyên viên tư vấn đã tham gia cuộc gọi');
+        },
+        onUserOffline: (
+          RtcConnection connection,
+          int remoteUid,
+          UserOfflineReasonType reason,
+        ) {
+          log('👤 Remote user left: $remoteUid, reason: $reason');
+          setState(() {
+            _remoteUid = null;
+          });
+          _leaveChannel();
+          _showInfoSnackBar('Chuyên viên tư vấn đã rời khỏi cuộc gọi');
+        },
+        onConnectionStateChanged: (
+          RtcConnection connection,
+          ConnectionStateType state,
+          ConnectionChangedReasonType reason,
+        ) {
+          log('🔗 Connection state changed: $state, reason: $reason');
+          if (state == ConnectionStateType.connectionStateFailed) {
+            _showErrorSnackBar('Kết nối thất bại. Vui lòng thử lại.');
+            setState(() {
+              _isConnecting = false;
+            });
+          }
+        },
+        onError: (ErrorCodeType err, String msg) {
+          log('❌ Agora error: $err, message: $msg');
+          _showErrorSnackBar('Lỗi video call: ${jsonEncode(err)}');
           setState(() {
             _isConnecting = false;
           });
-        }
+        },
+        onAudioVolumeIndication: (
+          RtcConnection connection,
+          List<AudioVolumeInfo> speakers,
+          int speakerNumber,
+          int totalVolume,
+        ) {
+          for (AudioVolumeInfo speaker in speakers) {
+            if (speaker.uid == 0) {
+              // Local user
+              setState(() {
+                _isSpeaking =
+                    speaker.volume! > 5; // Threshold for speaking detection
+              });
+              break;
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> requestConsultant(String channelName, String token) async {
+    final result = await Dio().post(
+      '${dotenv.env['BASE_URL']}/api/UserConnection/connect',
+      data: {
+        "userId": _userId,
+        "channelName": channelName,
+        "type": 'CALL',
+        "token": token,
+        "consultant": null,
       },
-      onError: (ErrorCodeType err, String msg) {
-        log('❌ Agora error: $err, message: $msg');
-        _showErrorSnackBar('Lỗi video call: ${jsonEncode(err)}');
+    );
+    log('message 151: ${result.data.toString()}');
+  }
+
+  Future<void> _joinChannel() async {
+    final result = await Dio().get(
+      '${dotenv.env['BASE_URL_CALL']}/agora-token?channelName=${_channelController.text}',
+    );
+    log(result.data.toString());
+    if (result.statusCode == 200) {
+      final token = result.data['token'];
+      if (_channelController.text.trim().isEmpty) {
+        _showErrorSnackBar('Vui lòng nhập Channel ID');
+        return;
+      }
+      await requestConsultant(_channelController.text.trim(), token);
+
+      setState(() {
+        _channelName = _channelController.text.trim();
+        _isConnecting = true;
+      });
+
+      final success = await _agoraService.joinChannel(
+        channelName: _channelName!,
+        token: token,
+      );
+
+      if (!success) {
         setState(() {
           _isConnecting = false;
         });
-      },
-      onAudioVolumeIndication: (RtcConnection connection, List<AudioVolumeInfo> speakers, int speakerNumber, int totalVolume) {
-        for (AudioVolumeInfo speaker in speakers) {
-          if (speaker.uid == 0) { // Local user
-            setState(() {
-              _isSpeaking = speaker.volume! > 5; // Threshold for speaking detection
-            });
-            break;
-          }
-        }
-      },
-    ));
-  }
-  
-  Future<void> _joinChannel() async {
-    if (_channelController.text.trim().isEmpty) {
-      _showErrorSnackBar('Vui lòng nhập Channel ID');
-      return;
-    }
-    
-    setState(() {
-      _channelName = _channelController.text.trim();
-      _isConnecting = true;
-    });
-    
-    final success = await _agoraService.joinChannel(
-      channelName: _channelName!,
-      token: '006d37efc8cf7624babaf1a8c9f79e5ed04MbYFJA1zbiWVNf8Q+2nnN0LHuJkwlEPFEa2v+8oMmS8AQAgZDM3ZWZjOGNmNzYyNGJhYmFmMWE4YzlmNzllNWVkMDQARmNhbGxfYWNhMDRiNzJmYzdhNDBmZWIzNDkwOGRkZDUwMjhiOTNfZGM2ODg5YzZiOTUwNDEyZmIzNDgwOGRkZDUwMjhiOTMAIGRjNjg4OWM2Yjk1MDQxMmZiMzQ4MDhkZGQ1MDI4YjkzsyBIWGic6qMABA3'
-    );
-    
-    if (!success) {
-      setState(() {
-        _isConnecting = false;
-      });
-      _showErrorSnackBar('Không thể tham gia kênh. Vui lòng thử lại.');
+        _showErrorSnackBar('Không thể tham gia kênh. Vui lòng thử lại.');
+      }
     }
   }
-  
+
   Future<void> _leaveChannel() async {
     await _agoraService.leaveChannel();
     setState(() {
@@ -141,8 +192,9 @@ class _VideoCallPageState extends State<VideoCallPage> {
       _remoteUid = null;
       _isConnecting = false;
     });
+    Navigator.of(context).pop();
   }
-  
+
   Future<void> _toggleAudio() async {
     setState(() {
       _isAudioMuted = !_isAudioMuted;
@@ -150,7 +202,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
     await _agoraService.muteLocalAudio(_isAudioMuted);
     HapticFeedback.lightImpact();
   }
-  
+
   Future<void> _toggleVideo() async {
     setState(() {
       _isVideoMuted = !_isVideoMuted;
@@ -158,12 +210,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
     await _agoraService.muteLocalVideo(_isVideoMuted);
     HapticFeedback.lightImpact();
   }
-  
+
   Future<void> _switchCamera() async {
     await _agoraService.switchCamera();
     HapticFeedback.lightImpact();
   }
-  
+
   void _showErrorSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -175,7 +227,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       );
     }
   }
-  
+
   void _showSuccessSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -187,7 +239,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       );
     }
   }
-  
+
   void _showInfoSnackBar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -199,14 +251,14 @@ class _VideoCallPageState extends State<VideoCallPage> {
       );
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _channelName == null 
-              ? 'Tư vấn sản phẩm' 
+          _channelName == null
+              ? 'Tư vấn sản phẩm'
               : 'Đang tư vấn: ${widget.productName}',
           style: ResponsiveHelper.responsiveTextStyle(
             context: context,
@@ -237,7 +289,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       body: _channelName == null ? _buildJoinChannelUI() : _buildVideoCallUI(),
     );
   }
-  
+
   Widget _buildJoinChannelUI() {
     return Container(
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
@@ -272,10 +324,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
-            
+
             // Channel ID Input
             Container(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.getLargeSpacing(context),
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(
@@ -310,7 +364,9 @@ class _VideoCallPageState extends State<VideoCallPage> {
                         borderRadius: BorderRadius.circular(
                           ResponsiveHelper.getBorderRadius(context),
                         ),
-                        borderSide: BorderSide(color: AppColors.grey.withOpacity(0.3)),
+                        borderSide: BorderSide(
+                          color: AppColors.grey.withOpacity(0.3),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(
@@ -333,7 +389,9 @@ class _VideoCallPageState extends State<VideoCallPage> {
                       SizedBox(width: 4),
                       GestureDetector(
                         onTap: () {
-                          Clipboard.setData(ClipboardData(text: _channelController.text));
+                          Clipboard.setData(
+                            ClipboardData(text: _channelController.text),
+                          );
                           _showSuccessSnackBar('Đã copy Channel ID');
                         },
                         child: Text(
@@ -350,9 +408,9 @@ class _VideoCallPageState extends State<VideoCallPage> {
                 ],
               ),
             ),
-            
+
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
-            
+
             // Join Button
             SizedBox(
               width: double.infinity,
@@ -371,52 +429,59 @@ class _VideoCallPageState extends State<VideoCallPage> {
                   ),
                   elevation: 0,
                 ),
-                child: _isConnecting
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                child:
+                    _isConnecting
+                        ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                          Text(
-                            'Đang kết nối...',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
+                            SizedBox(
+                              width: ResponsiveHelper.getSpacing(context),
                             ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.video_call, size: 24),
-                          SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                          Text(
-                            'Bắt đầu tư vấn',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
+                            Text(
+                              'Đang kết nối...',
+                              style: ResponsiveHelper.responsiveTextStyle(
+                                context: context,
+                                baseSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        )
+                        : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.video_call, size: 24),
+                            SizedBox(
+                              width: ResponsiveHelper.getSpacing(context),
+                            ),
+                            Text(
+                              'Bắt đầu tư vấn',
+                              style: ResponsiveHelper.responsiveTextStyle(
+                                context: context,
+                                baseSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
               ),
             ),
-            
+
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            
+
             // Instructions
             Container(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+              padding: EdgeInsets.all(
+                ResponsiveHelper.getLargeSpacing(context),
+              ),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(
@@ -458,7 +523,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       ),
     );
   }
-  
+
   Widget _buildVideoCallUI() {
     return Stack(
       children: [
@@ -467,40 +532,41 @@ class _VideoCallPageState extends State<VideoCallPage> {
           width: double.infinity,
           height: double.infinity,
           color: Colors.black,
-          child: _remoteUid != null
-              ? AgoraVideoView(
-                  controller: VideoViewController.remote(
-                    rtcEngine: _agoraService.engine!,
-                    canvas: VideoCanvas(uid: _remoteUid),
-                    connection: RtcConnection(channelId: _channelName!),
-                  ),
-                )
-              : _localUserJoined
+          child:
+              _remoteUid != null
                   ? AgoraVideoView(
-                      controller: VideoViewController(
-                        rtcEngine: _agoraService.engine!,
-                        canvas: const VideoCanvas(uid: 0),
-                      ),
-                    )
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: Colors.white),
-                          SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                          Text(
-                            'Đang thiết lập kết nối...',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
+                    controller: VideoViewController.remote(
+                      rtcEngine: _agoraService.engine!,
+                      canvas: VideoCanvas(uid: _remoteUid),
+                      connection: RtcConnection(channelId: _channelName!),
                     ),
+                  )
+                  : _localUserJoined
+                  ? AgoraVideoView(
+                    controller: VideoViewController(
+                      rtcEngine: _agoraService.engine!,
+                      canvas: const VideoCanvas(uid: 0),
+                    ),
+                  )
+                  : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                        Text(
+                          'Đang thiết lập kết nối...',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
         ),
-        
+
         // Local video view (picture in picture when remote is connected)
         if (_remoteUid != null && _localUserJoined)
           Positioned(
@@ -528,7 +594,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
               ),
             ),
           ),
-        
+
         // Status indicator
         Positioned(
           top: ResponsiveHelper.getLargeSpacing(context),
@@ -567,7 +633,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
             ),
           ),
         ),
-        
+
         // Control buttons
         Positioned(
           bottom: ResponsiveHelper.getLargeSpacing(context) * 2,
@@ -578,26 +644,29 @@ class _VideoCallPageState extends State<VideoCallPage> {
             children: [
               // Audio toggle with speaking indicator
               _buildControlButton(
-                icon: _isAudioMuted ? Icons.mic_off : (_isSpeaking ? Icons.mic : Icons.mic),
+                icon:
+                    _isAudioMuted
+                        ? Icons.mic_off
+                        : (_isSpeaking ? Icons.mic : Icons.mic),
                 isActive: !_isAudioMuted,
                 onPressed: _toggleAudio,
                 showSpeakingIndicator: _isSpeaking && !_isAudioMuted,
               ),
-              
+
               // Video toggle
               _buildControlButton(
                 icon: _isVideoMuted ? Icons.videocam_off : Icons.videocam,
                 isActive: !_isVideoMuted,
                 onPressed: _toggleVideo,
               ),
-              
+
               // Switch camera
               _buildControlButton(
                 icon: Icons.cameraswitch,
                 isActive: true,
                 onPressed: _switchCamera,
               ),
-              
+
               // End call
               _buildControlButton(
                 icon: Icons.call_end,
@@ -611,7 +680,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       ],
     );
   }
-  
+
   Widget _buildControlButton({
     required IconData icon,
     required bool isActive,
@@ -621,7 +690,11 @@ class _VideoCallPageState extends State<VideoCallPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: backgroundColor ?? (isActive ? Colors.white.withOpacity(0.9) : Colors.black.withOpacity(0.5)),
+        color:
+            backgroundColor ??
+            (isActive
+                ? Colors.white.withOpacity(0.9)
+                : Colors.black.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -631,18 +704,20 @@ class _VideoCallPageState extends State<VideoCallPage> {
           ),
         ],
         // Speaking indicator border
-        border: showSpeakingIndicator 
-            ? Border.all(color: AppColors.success, width: 3)
-            : null,
+        border:
+            showSpeakingIndicator
+                ? Border.all(color: AppColors.success, width: 3)
+                : null,
       ),
       child: Stack(
         children: [
           IconButton(
             icon: Icon(
               icon,
-              color: backgroundColor != null 
-                  ? Colors.white 
-                  : (isActive ? AppColors.text : Colors.white),
+              color:
+                  backgroundColor != null
+                      ? Colors.white
+                      : (isActive ? AppColors.text : Colors.white),
               size: ResponsiveHelper.getIconSize(context, 24),
             ),
             onPressed: onPressed,

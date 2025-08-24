@@ -13,22 +13,20 @@ CartGetResponse _$CartGetResponseFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$CartGetResponseToJson(CartGetResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 CartGetData _$CartGetDataFromJson(Map<String, dynamic> json) => CartGetData(
-      cartId: json['cartId'] as String,
-      customerId: json['customerId'] as String,
-      customerName: json['customerName'] as String,
-      elderId: json['elderId'] as String?,
-      elderName: json['elderName'] as String?,
-      status: json['status'] as String,
-      items: (json['items'] as List<dynamic>)
+  cartId: json['cartId'] as String,
+  customerId: json['customerId'] as String,
+  customerName: json['customerName'] as String,
+  elderId: json['elderId'] as String?,
+  elderName: json['elderName'] as String?,
+  status: json['status'] as String,
+  items:
+      (json['items'] as List<dynamic>)
           .map((e) => CartGetItem.fromJson(e as Map<String, dynamic>))
           .toList(),
-    );
+);
 
 Map<String, dynamic> _$CartGetDataToJson(CartGetData instance) =>
     <String, dynamic>{
@@ -42,12 +40,12 @@ Map<String, dynamic> _$CartGetDataToJson(CartGetData instance) =>
     };
 
 CartGetItem _$CartGetItemFromJson(Map<String, dynamic> json) => CartGetItem(
-      productVariantId: json['productVariantId'] as String,
-      productName: json['productName'] as String,
-      quantity: (json['quantity'] as num).toInt(),
-      productPrice: (json['productPrice'] as num).toDouble(),
-      imageUrl: json['imageUrl'] as String?,
-    );
+  productVariantId: json['productVariantId'] as String,
+  productName: json['productName'] as String,
+  quantity: (json['quantity'] as num).toInt(),
+  productPrice: (json['productPrice'] as num).toDouble(),
+  imageUrl: json['imageUrl'] as String?,
+);
 
 Map<String, dynamic> _$CartGetItemToJson(CartGetItem instance) =>
     <String, dynamic>{

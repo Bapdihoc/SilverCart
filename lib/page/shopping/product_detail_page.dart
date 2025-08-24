@@ -61,6 +61,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   String? _relatedErrorMessage;
   List<Map<String, dynamic>> _relatedProducts = [];
 
+  // Cart data
+  int _cartItemCount = 0;
+
   final List<String> _elderlyList = [
     'Bà Nguyễn Thị A',
     'Ông Trần Văn B',
@@ -263,21 +266,52 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     _loadProductDetail();
     _initializeSpeech();
+    _loadCartItemCount();
   }
 
   Future<void> _initializeSpeech() async {
+    log('🎤 [ProductDetailPage] _initializeSpeech called');
+    
     try {
+      log('🔄 [ProductDetailPage] Initializing speech service...');
       await _speechService.initialize();
+      log('✅ [ProductDetailPage] Speech service initialized successfully');
+      
       setState(() {
         _isSpeechEnabled = true;
       });
+      log('✅ [ProductDetailPage] Set _isSpeechEnabled to true');
       
       // Welcome message for elderly users
+      log('⏳ [ProductDetailPage] Waiting 1 second before welcome message...');
       await Future.delayed(Duration(seconds: 1));
+      
+      log('🔊 [ProductDetailPage] Speaking welcome message...');
       await _speechService.speakWelcome();
+      log('✅ [ProductDetailPage] Welcome message completed');
+      
     } catch (e) {
-      log('Failed to initialize speech service: $e');
+      log('❌ [ProductDetailPage] Failed to initialize speech service: $e');
+      log('❌ [ProductDetailPage] Stack trace: ${StackTrace.current}');
+      
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể khởi tạo trợ lý giọng nói. Vui lòng kiểm tra kết nối internet và thử lại.'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload cart count when page becomes active again
+    _loadCartItemCount();
   }
 
   @override
@@ -314,6 +348,38 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       setState(() {
         _errorMessage = 'Lỗi tải thông tin sản phẩm: ${e.toString()}';
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadCartItemCount() async {
+    try {
+      // Get user ID from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
+
+      if (userId == null) {
+        setState(() {
+          _cartItemCount = 0;
+        });
+        return;
+      }
+
+      // Call API to get cart data
+      final result = await _cartService.getCartByCustomerId(userId, 0);
+
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _cartItemCount = result.data!.data.items.length;
+        });
+      } else {
+        setState(() {
+          _cartItemCount = 0;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _cartItemCount = 0;
       });
     }
   }
@@ -379,6 +445,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     if (!_isSpeechEnabled) return;
 
     final commandType = _speechService.getCommandType(command);
+    log('🎯 [Voice] Executing: $commandType from command: "$command"');
+    
+    // Provide feedback for recognized command
+    if (commandType != 'unknown') {
+      await _speechService.speak('Đã nhận lệnh: $command');
+    }
     
     switch (commandType) {
       case 'increase_quantity':
@@ -406,7 +478,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         await _speechService.speakInstructions();
         break;
       default:
-        await _speechService.speak('Xin lỗi, tôi không hiểu lệnh này. Vui lòng thử lại.');
+        log('❓ [Voice] Unknown command: "$command"');
+        await _speechService.speak('Xin lỗi, tôi không hiểu lệnh "$command". Vui lòng thử lại với các lệnh: tăng số lượng, giảm số lượng, thêm vào giỏ, đọc thông tin, đọc giá.');
     }
   }
 
@@ -454,23 +527,94 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   Future<void> _toggleVoiceAssistant() async {
-    if (!_isSpeechEnabled) return;
-
-    setState(() {
-      _isListening = !_isListening;
-    });
+    log('🎤 [ProductDetailPage] _toggleVoiceAssistant called, _isSpeechEnabled: $_isSpeechEnabled');
+    
+    if (!_isSpeechEnabled) {
+      log('❌ [ProductDetailPage] Speech not enabled, returning');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Trợ lý giọng nói chưa được khởi tạo. Vui lòng thử lại.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     if (_isListening) {
-      // Start listening for voice commands
-      await _speechService.speak('Tôi đang lắng nghe. Vui lòng nói lệnh của bạn.');
-      
-      // Simulate voice command (in real app, you would use speech recognition)
-      _showVoiceCommandDialog();
-    } else {
       // Stop listening
+      log('🛑 [ProductDetailPage] Stopping voice assistant...');
+      _speechService.stopListening();
+      setState(() {
+        _isListening = false;
+      });
+      log('✅ [ProductDetailPage] Voice assistant stopped');
       await _speechService.speak('Đã dừng lắng nghe.');
+    } else {
+      // Start listening for voice commands
+      log('🎯 [ProductDetailPage] Starting voice assistant...');
+      setState(() {
+        _isListening = true;
+      });
+      log('✅ [ProductDetailPage] Set _isListening to true');
+      
+      await _speechService.speak('Tôi đang lắng nghe. Vui lòng nói lệnh của bạn.');
+      log('🔊 [ProductDetailPage] Spoke listening message');
+      
+      // Start real-time speech recognition
+      log('🚀 [ProductDetailPage] Starting speech recognition...');
+      await _speechService.startListening(
+        onResult: (transcript) async {
+          log('🎯 [Voice] Command: "$transcript"');
+          await _handleVoiceCommand(transcript);
+          // Don't set _isListening to false here - let it stay listening
+        },
+        onError: (error) async {
+          log('❌ [Voice] Error: "$error"');
+          
+          // Show error in UI
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.error,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          
+          await _speechService.speakError(error);
+          // Only stop listening on error
+          setState(() {
+            _isListening = false;
+          });
+        },
+        onListeningComplete: () {
+          log('✅ [ProductDetailPage] Speech recognition completed');
+          // Only stop listening if there was an error or completion
+          // For successful recognition, keep listening for more commands
+          if (!_isListening) {
+            setState(() {
+              _isListening = false;
+            });
+          }
+        },
+      );
+      log('🎤 [ProductDetailPage] Speech recognition started');
+      
+      // Add timeout to prevent mic from hanging indefinitely
+      // After 30 seconds, if no command detected, stop listening
+      Future.delayed(const Duration(seconds: 30), () {
+        if (_isListening) {
+          log('⏰ [Voice] Timeout reached, stopping listening');
+          _speechService.stopListening();
+          setState(() {
+            _isListening = false;
+          });
+          _speechService.speak('Hết thời gian lắng nghe. Nhấn nút mic để bắt đầu lại.');
+        }
+      });
     }
   }
+
+
 
   void _showVoiceCommandDialog() {
     showDialog(
@@ -828,6 +972,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               ],
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 IconButton(
                   icon: Icon(
@@ -839,34 +984,55 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-                    );
+                    ).then((_) {
+                      // Reload cart count when returning from cart page
+                      _loadCartItemCount();
+                    });
                   },
                 ),
-                // Positioned(
-                //   right: 8,
-                //   top: 8,
-                //   child: Container(
-                //     padding: const EdgeInsets.all(2),
-                //     decoration: BoxDecoration(
-                //       color: AppColors.error,
-                //       borderRadius: BorderRadius.circular(8),
-                //     ),
-                //     constraints: const BoxConstraints(
-                //       minWidth: 16,
-                //       minHeight: 16,
-                //     ),
-                //     child: Text(
-                //       '3',
-                //       style: ResponsiveHelper.responsiveTextStyle(
-                //         context: context,
-                //         baseSize: 10,
-                //         color: Colors.white,
-                //         fontWeight: FontWeight.bold,
-                //       ),
-                //       textAlign: TextAlign.center,
-                //     ),
-                //   ),
-                // ),
+                // Cart item count badge - floating outside
+                if (_cartItemCount > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withOpacity(0.5),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Text(
+                        _cartItemCount > 99 ? '99+' : '$_cartItemCount',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -903,6 +1069,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           child: Column(
             children: [
               SizedBox(
+                
                 height: kToolbarHeight + MediaQuery.of(context).padding.top,
               ),
               Expanded(child: _buildImageGallery(images)),
@@ -1190,6 +1357,56 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Price section first
+          if (hasDiscount) ...[
+            Row(
+              children: [
+                Text(
+                  CurrencyUtils.formatVND(_currentVariant!.originalPrice),
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 16,
+                    color: AppColors.grey,
+                  ).copyWith(decoration: TextDecoration.lineThrough),
+                ),
+                SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ResponsiveHelper.getSpacing(context),
+                    vertical: ResponsiveHelper.getSpacing(context) / 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(
+                      ResponsiveHelper.getBorderRadius(context),
+                    ),
+                  ),
+                  child: Text(
+                    '-$discountPercent%',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          ],
+          Text(
+            CurrencyUtils.formatVND(_currentVariant!.discountedPrice),
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          
+          // Product name and details
           Text(
             _productDetail!.name,
             style: ResponsiveHelper.responsiveTextStyle(
@@ -1268,53 +1485,6 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 ),
               ),
             ],
-          ),
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          if (hasDiscount) ...[
-            Row(
-              children: [
-                Text(
-                  CurrencyUtils.formatVND(_currentVariant!.originalPrice),
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 16,
-                    color: AppColors.grey,
-                  ).copyWith(decoration: TextDecoration.lineThrough),
-                ),
-                SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getSpacing(context),
-                    vertical: ResponsiveHelper.getSpacing(context) / 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    borderRadius: BorderRadius.circular(
-                      ResponsiveHelper.getBorderRadius(context),
-                    ),
-                  ),
-                  child: Text(
-                    '-$discountPercent%',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: ResponsiveHelper.getSpacing(context)),
-          ],
-          Text(
-            CurrencyUtils.formatVND(_currentVariant!.discountedPrice),
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
           ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           Text(
@@ -1801,7 +1971,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '⚙️ Thông số kỹ thuật',
+            'Thông số chi tiết',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 18,
@@ -2494,6 +2664,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       
       if (result.isSuccess) {
         log('Cart updated successfully');
+        
+        // Reload cart count after successful add
+        _loadCartItemCount();
         
         // Voice feedback for successful cart addition
         if (_isSpeechEnabled && _productDetail != null) {

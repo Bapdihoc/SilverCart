@@ -2,12 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:injectable/injectable.dart';
 import 'package:retrofit/http.dart';
-import 'package:silvercart/models/category_response.dart';
 import 'package:silvercart/models/order_response.dart';
-import 'package:silvercart/models/product_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
+import 'package:silvercart/models/order_statistic_response.dart';
 part 'order_api_service.g.dart';
 
 class ParseErrorLogger {
@@ -30,6 +29,9 @@ abstract class OrderApiModule {
 abstract class OrderApiService {
   factory OrderApiService(Dio dio, {String? baseUrl}) = _OrderApiService;
 
+  @POST('/api/Order/CancelOrder')
+  Future<void> cancelOrder(@Body() Map<String, String> body);
+
   @GET('/api/Order')
   Future<OrderResponse> getOrders();
 
@@ -39,7 +41,13 @@ abstract class OrderApiService {
   @POST('/api/Order/VnPay')
   Future<CreateOrderResponse> createOrder(@Body() CreateOrderRequest request);
 
+  @POST('/api/Order/CheckoutByWallet')
+  Future<CreateOrderResponse> checkoutByWallet(@Body() CreateOrderRequest request);
+
   @GET('/api/Order/user')
   Future<UserOrderResponse> getUserOrders();
+  
+  @GET('/api/Order/GetUserStatistic/{userId}')
+  Future<OrderStatisticResponse> getUserStatistic(@Path('userId') String userId);
   
 }

@@ -99,17 +99,39 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
   }
 
   Future<void> _initializeSpeech() async {
+    log('🎤 [ElderlyProductDetailPage] _initializeSpeech called');
+    
     try {
+      log('🔄 [ElderlyProductDetailPage] Initializing speech service...');
       await _speechService.initialize();
+      log('✅ [ElderlyProductDetailPage] Speech service initialized successfully');
+      
       setState(() {
         _isSpeechEnabled = true;
       });
+      log('✅ [ElderlyProductDetailPage] Set _isSpeechEnabled to true');
       
       // Welcome message for elderly users
+      log('⏳ [ElderlyProductDetailPage] Waiting 1 second before welcome message...');
       await Future.delayed(Duration(seconds: 1));
+      
+      log('🔊 [ElderlyProductDetailPage] Speaking welcome message...');
       await _speechService.speakWelcome();
+      log('✅ [ElderlyProductDetailPage] Welcome message completed');
+      
     } catch (e) {
-      log('Failed to initialize speech service: $e');
+      log('❌ [ElderlyProductDetailPage] Failed to initialize speech service: $e');
+      log('❌ [ElderlyProductDetailPage] Stack trace: ${StackTrace.current}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể khởi tạo trợ lý giọng nói. Vui lòng kiểm tra kết nối internet và thử lại.'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -207,6 +229,12 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
     if (!_isSpeechEnabled) return;
 
     final commandType = _speechService.getCommandType(command);
+    log('🎯 [Voice] Executing: $commandType from command: "$command"');
+    
+    // Provide feedback for recognized command
+    if (commandType != 'unknown') {
+      await _speechService.speak('Đã nhận lệnh: $command');
+    }
     
     switch (commandType) {
       case 'increase_quantity':
@@ -220,6 +248,10 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
       case 'add_to_cart':
         await _addToCart();
         break;
+      case 'buy_now':
+        _buyNow();
+        await _speechService.speakBuyNowAction();
+        break;
       case 'read_info':
         await _readProductInfo();
         break;
@@ -230,7 +262,8 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
         await _speechService.speakInstructions();
         break;
       default:
-        await _speechService.speak('Xin lỗi, tôi không hiểu lệnh này. Vui lòng thử lại.');
+        log('❓ [Voice] Unknown command: "$command"');
+        await _speechService.speak('Xin lỗi, tôi không hiểu lệnh "$command". Vui lòng thử lại với các lệnh: tăng số lượng, giảm số lượng, thêm vào giỏ, đọc thông tin, đọc giá.');
     }
   }
 
@@ -278,21 +311,90 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
   }
 
   Future<void> _toggleVoiceAssistant() async {
-    if (!_isSpeechEnabled) return;
-
-    setState(() {
-      _isListening = !_isListening;
-    });
+    log('🎤 [ElderlyProductDetailPage] _toggleVoiceAssistant called, _isSpeechEnabled: $_isSpeechEnabled');
+    
+    if (!_isSpeechEnabled) {
+      log('❌ [ElderlyProductDetailPage] Speech not enabled, returning');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Trợ lý giọng nói chưa được khởi tạo. Vui lòng thử lại.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     if (_isListening) {
-      // Start listening for voice commands
-      await _speechService.speak('Tôi đang lắng nghe. Vui lòng nói lệnh của bạn.');
-      
-      // Simulate voice command (in real app, you would use speech recognition)
-      _showVoiceCommandDialog();
-    } else {
       // Stop listening
+      log('🛑 [ElderlyProductDetailPage] Stopping voice assistant...');
+      _speechService.stopListening();
+      setState(() {
+        _isListening = false;
+      });
+      log('✅ [ElderlyProductDetailPage] Voice assistant stopped');
       await _speechService.speak('Đã dừng lắng nghe.');
+    } else {
+      // Start listening for voice commands
+      log('🎯 [ElderlyProductDetailPage] Starting voice assistant...');
+      setState(() {
+        _isListening = true;
+      });
+      log('✅ [ElderlyProductDetailPage] Set _isListening to true');
+      
+      await _speechService.speak('Tôi đang lắng nghe. Vui lòng nói lệnh của bạn.');
+      log('🔊 [ElderlyProductDetailPage] Spoke listening message');
+      
+      // Start real-time speech recognition
+      log('🚀 [ElderlyProductDetailPage] Starting speech recognition...');
+      await _speechService.startListening(
+        onResult: (transcript) async {
+          log('🎯 [Voice] Command: "$transcript"');
+          await _handleVoiceCommand(transcript);
+          // Don't set _isListening to false here - let it stay listening
+        },
+        onError: (error) async {
+          log('❌ [Voice] Error: "$error"');
+          
+          // Show error in UI
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: AppColors.error,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          
+          await _speechService.speakError(error);
+          // Only stop listening on error
+          setState(() {
+            _isListening = false;
+          });
+        },
+        onListeningComplete: () {
+          log('✅ [ElderlyProductDetailPage] Speech recognition completed');
+          // Only stop listening if there was an error or completion
+          // For successful recognition, keep listening for more commands
+          if (!_isListening) {
+            setState(() {
+              _isListening = false;
+            });
+          }
+        },
+      );
+      log('🎤 [ElderlyProductDetailPage] Speech recognition started');
+      
+      // Add timeout to prevent mic from hanging indefinitely
+      // After 30 seconds, if no command detected, stop listening
+      Future.delayed(const Duration(seconds: 30), () {
+        if (_isListening) {
+          log('⏰ [Voice] Timeout reached, stopping listening');
+          _speechService.stopListening();
+          setState(() {
+            _isListening = false;
+          });
+          _speechService.speak('Hết thời gian lắng nghe. Nhấn nút mic để bắt đầu lại.');
+        }
+      });
     }
   }
 
@@ -366,6 +468,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
       {'text': '• "Tăng số lượng" - Tăng số lượng sản phẩm', 'command': 'tăng số lượng'},
       {'text': '• "Giảm số lượng" - Giảm số lượng sản phẩm', 'command': 'giảm số lượng'},
       {'text': '• "Thêm vào giỏ" - Thêm vào giỏ hàng', 'command': 'thêm vào giỏ'},
+      {'text': '• "Mua ngay" - Mua sản phẩm ngay', 'command': 'mua ngay'},
       {'text': '• "Đọc thông tin" - Nghe thông tin sản phẩm', 'command': 'đọc thông tin'},
       {'text': '• "Đọc giá" - Nghe thông tin giá cả', 'command': 'đọc giá'},
     ];
@@ -1415,6 +1518,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
               _buildElderlyVoiceChip('Tăng số lượng'),
               _buildElderlyVoiceChip('Giảm số lượng'),
               _buildElderlyVoiceChip('Thêm vào giỏ'),
+              _buildElderlyVoiceChip('Mua ngay'),
               _buildElderlyVoiceChip('Đọc thông tin'),
               _buildElderlyVoiceChip('Đọc giá'),
             ],
@@ -1937,6 +2041,29 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
   }
 
 
+
+  void _buyNow() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Chuyển đến thanh toán...',
+          style: ResponsiveHelper.responsiveTextStyle(
+            context: context,
+            baseSize: 14,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            ResponsiveHelper.getBorderRadius(context),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _startVideoConsultation() {
     if (_productDetail != null) {

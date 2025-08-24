@@ -4,6 +4,7 @@ import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
+import 'package:silvercart/models/order_statistic_response.dart';
 import 'package:silvercart/network/data/order_api_service.dart';
 import 'package:silvercart/network/data/api_response_handler.dart';
 import 'package:silvercart/network/repositories/order/order_respository.dart';
@@ -11,6 +12,18 @@ import 'package:injectable/injectable.dart';
 
 @LazySingleton(as: OrderRespository, env: [Environment.prod])
 class OrderRespositoryApi implements OrderRespository {
+  @override
+  Future<BaseResponse<void>> cancelOrder(String orderId, String cancelReason) async {
+    try {
+      await _api.cancelOrder({
+        'orderId': orderId,
+        'cancelReason': cancelReason,
+      });
+      return BaseResponse.success(data: null);
+    } catch (e) {
+      return BaseResponse.error(message: e.toString());
+    }
+  }
   OrderApiService _api;
   OrderRespositoryApi(this._api);
   @override
@@ -47,6 +60,19 @@ class OrderRespositoryApi implements OrderRespository {
   }
 
   @override
+  Future<BaseResponse<CreateOrderResponse>> checkoutByWallet(CreateOrderRequest request) async {
+    try {
+      final response = await _api.checkoutByWallet(request);
+      return BaseResponse.success(data: response);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<CreateOrderResponse>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
+
+  @override
   Future<BaseResponse<UserOrderResponse>> getUserOrders() async {
     try {
       final response = await _api.getUserOrders();
@@ -54,6 +80,19 @@ class OrderRespositoryApi implements OrderRespository {
     } catch (e) {
       if (e is DioException) {
         return ApiResponseHandler.handleError<UserOrderResponse>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
+
+  @override
+  Future<BaseResponse<OrderStatisticResponse>> getUserStatistic(String userId) async {
+    try {
+      final response = await _api.getUserStatistic(userId);
+      return BaseResponse.success(data: response);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<OrderStatisticResponse>(e);
       }
       return BaseResponse.error(message: e.toString());
     }

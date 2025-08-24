@@ -3,6 +3,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/utils/currency_utils.dart';
 import '../../models/user_order_response.dart';
+import '../../network/service/order_service.dart';
+import '../../injection.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final UserOrderData order;
@@ -18,6 +20,7 @@ class OrderDetailPage extends StatefulWidget {
 
 class _OrderDetailPageState extends State<OrderDetailPage>
     with TickerProviderStateMixin {
+  late final OrderService _orderService;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -25,6 +28,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   @override
   void initState() {
     super.initState();
+    _orderService = getIt<OrderService>();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -48,7 +52,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     
     _animationController.forward();
   }
-
+  
   @override
   void dispose() {
     _animationController.dispose();
@@ -76,6 +80,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                     _buildOrderSummarySection(),
                     if (widget.order.note.isNotEmpty) _buildOrderNoteSection(),
                     _buildOrderTimelineSection(),
+                    if (_canCancelOrder()) _buildCancelOrderButton(),
                     SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
                   ],
                 ),
@@ -95,42 +100,23 @@ class _OrderDetailPageState extends State<OrderDetailPage>
       expandedHeight: 120,
       leading: Container(
         margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-        decoration: BoxDecoration(
-          color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
+                boxShadow: [
+                  BoxShadow(
               color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
         child: IconButton(
           icon: Icon(Icons.arrow_back_ios_rounded, color: AppColors.text, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      actions: [
-        Container(
-          margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.share_rounded, color: AppColors.primary, size: 20),
-            onPressed: _shareOrder,
-          ),
-        ),
-      ],
+     
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -146,38 +132,38 @@ class _OrderDetailPageState extends State<OrderDetailPage>
           child: SafeArea(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: [
+                    children: [
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: ResponsiveHelper.getLargeSpacing(context),
                     vertical: ResponsiveHelper.getSpacing(context),
                   ),
                   child: Column(
-                    children: [
-                      Text(
+                        children: [
+                          Text(
                         'Chi tiết đơn hàng',
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 24,
-                          fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                           color: AppColors.text,
-                        ),
-                      ),
+                            ),
+                          ),
                       SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                      Text(
+                          Text(
                         '#${widget.order.id.substring(0, 8).toUpperCase()}',
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppColors.primary,
-                        ),
+                            ),
+                          ),
+                        ],
+                  ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -188,7 +174,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     return Container(
       margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
+                    decoration: BoxDecoration(
         gradient: _getStatusGradient(),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -198,9 +184,9 @@ class _OrderDetailPageState extends State<OrderDetailPage>
             offset: const Offset(0, 5),
           ),
         ],
-      ),
-      child: Row(
-        children: [
+                    ),
+                    child: Row(
+                      children: [
           Container(
             width: ResponsiveHelper.getIconSize(context, 60),
             height: ResponsiveHelper.getIconSize(context, 60),
@@ -217,9 +203,9 @@ class _OrderDetailPageState extends State<OrderDetailPage>
           SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                   widget.order.orderStatusText,
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
@@ -229,19 +215,19 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                   ),
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Text(
+                            Text(
                   _getStatusDescription(),
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 14,
                     color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                              ),
+                            ),
+                          ],
+                          ),
+                        ),
+                      ],
+                    ),
     );
   }
 
@@ -252,20 +238,20 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         vertical: ResponsiveHelper.getSpacing(context),
       ),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           Row(
             children: [
               Icon(
@@ -279,7 +265,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 18,
-                  fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                   color: AppColors.text,
                 ),
               ),
@@ -296,7 +282,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   }
 
   Widget _buildCustomerInfoSection() {
-    if (widget.order.elderName.isEmpty) return const SizedBox.shrink();
+    if (widget.order.elderName == null || widget.order.elderName!.isEmpty) return const SizedBox.shrink();
     
     return Container(
       margin: EdgeInsets.symmetric(
@@ -304,39 +290,39 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         vertical: ResponsiveHelper.getSpacing(context),
       ),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           Row(
-            children: [
+                    children: [
               Icon(
                 Icons.person_outline_rounded,
                 size: ResponsiveHelper.getIconSize(context, 24),
                 color: AppColors.secondary,
               ),
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Text(
+                            Text(
                 'Thông tin người nhận',
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
-                ),
-              ),
-            ],
-          ),
+                              ),
+                            ),
+                          ],
+                        ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           Container(
             padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
@@ -349,27 +335,27 @@ class _OrderDetailPageState extends State<OrderDetailPage>
               ),
             ),
             child: Row(
-              children: [
-                Container(
+                      children: [
+                        Container(
                   width: ResponsiveHelper.getIconSize(context, 50),
                   height: ResponsiveHelper.getIconSize(context, 50),
-                  decoration: BoxDecoration(
+                          decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(25),
-                  ),
+                          ),
                   child: Icon(
                     Icons.elderly_rounded,
                     size: ResponsiveHelper.getIconSize(context, 24),
                     color: AppColors.secondary,
-                  ),
+                        ),
                 ),
                 SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                       Text(
-                        widget.order.elderName,
+                        widget.order.elderName!,
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 16,
@@ -378,19 +364,19 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                         ),
                       ),
                       SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                      Text(
+                              Text(
                         'Người thân được chăm sóc',
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 14,
                           color: AppColors.secondary,
                           fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                      ],
             ),
           ),
         ],
@@ -405,20 +391,20 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         vertical: ResponsiveHelper.getSpacing(context),
       ),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
+                decoration: BoxDecoration(
+                  color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
           Row(
             children: [
               Icon(
@@ -432,7 +418,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 18,
-                  fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                   color: AppColors.text,
                 ),
               ),
@@ -463,7 +449,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
             final index = entry.key;
             final detail = entry.value;
             return Column(
-              children: [
+                      children: [
                 if (index > 0) 
                   Divider(
                     color: Colors.grey.withOpacity(0.2),
@@ -496,8 +482,8 @@ class _OrderDetailPageState extends State<OrderDetailPage>
             height: ResponsiveHelper.getIconSize(context, 60),
             decoration: BoxDecoration(
               color: AppColors.grey.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
             child: Icon(
               Icons.info_outline_rounded,
               size: ResponsiveHelper.getIconSize(context, 30),
@@ -538,11 +524,11 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                         context: context,
                         baseSize: 14,
                         color: AppColors.grey,
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
             ),
           ),
           Column(
@@ -585,10 +571,10 @@ class _OrderDetailPageState extends State<OrderDetailPage>
           color: AppColors.primary.withOpacity(0.2),
           width: 1,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
           Row(
             children: [
               Icon(
@@ -602,7 +588,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 18,
-                  fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                   color: AppColors.text,
                 ),
               ),
@@ -613,7 +599,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
           // Subtotal
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+                          children: [
               Text(
                 'Tạm tính',
                 style: ResponsiveHelper.responsiveTextStyle(
@@ -628,10 +614,10 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                   context: context,
                   baseSize: 16,
                   color: AppColors.text,
-                ),
-              ),
-            ],
-          ),
+                              ),
+                            ),
+                          ],
+                        ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           
           // Shipping
@@ -721,7 +707,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 color: AppColors.warning,
               ),
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Text(
+          Text(
                 'Ghi chú đơn hàng',
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
@@ -766,7 +752,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         vertical: ResponsiveHelper.getSpacing(context),
       ),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
+            decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -777,9 +763,9 @@ class _OrderDetailPageState extends State<OrderDetailPage>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           Row(
             children: [
               Icon(
@@ -788,45 +774,45 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 color: AppColors.primary,
               ),
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Text(
+                Text(
                 'Tiến trình đơn hàng',
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           _buildTimelineItem(
             'Đã tạo đơn hàng',
             'Đơn hàng đã được tạo thành công',
             Icons.receipt_rounded,
             true,
-            widget.order.orderStatus >= 0,
+            widget.order.orderStatus == 'Created',
           ),
           _buildTimelineItem(
             'Đã thanh toán',
             'Đơn hàng đã được thanh toán',
             Icons.payment_rounded,
             false,
-            widget.order.orderStatus >= 1,
+            widget.order.orderStatus == 'Paid',
           ),
           _buildTimelineItem(
             'Đang giao hàng',
             'Đơn hàng đang được vận chuyển',
             Icons.local_shipping_rounded,
             false,
-            widget.order.orderStatus >= 2,
-          ),
+            widget.order.orderStatus == 'PendingChecked',
+            ),
           _buildTimelineItem(
             'Hoàn thành',
             'Đơn hàng đã được giao thành công',
             Icons.check_circle_rounded,
             false,
-            widget.order.orderStatus >= 3,
+            widget.order.orderStatus == 'PendingConfirm',
             isLast: true,
           ),
         ],
@@ -845,11 +831,11 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     return Row(
       children: [
         Column(
-          children: [
-            Container(
+      children: [
+        Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
+          decoration: BoxDecoration(
                 color: isCompleted ? AppColors.primary : AppColors.grey.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -871,28 +857,28 @@ class _OrderDetailPageState extends State<OrderDetailPage>
         Expanded(
           child: Container(
             padding: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 16,
-                    fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w600,
                     color: isCompleted ? AppColors.text : AppColors.grey,
-                  ),
                 ),
+              ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Text(
-                  subtitle,
+              Text(
+                subtitle,
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 14,
                     color: isCompleted ? AppColors.grey : AppColors.grey.withOpacity(0.7),
-                  ),
                 ),
-              ],
+              ),
+            ],
             ),
           ),
         ),
@@ -904,7 +890,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     return Padding(
       padding: EdgeInsets.only(bottom: ResponsiveHelper.getSpacing(context)),
       child: Row(
-        children: [
+          children: [
           Expanded(
             flex: 2,
             child: Text(
@@ -934,16 +920,29 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   }
 
   Color _getStatusColor() {
+    
     switch (widget.order.orderStatus) {
-      case 0:
+      case 'Created':
         return Colors.blue;
-      case 1:
+      case 'Paid':
         return Colors.orange;
-      case 2:
+      case 'PendingChecked':
         return Colors.purple;
-      case 3:
+      case 'PendingConfirm':
         return AppColors.success;
-      case 4:
+      case 'PendingPickup':
+        return AppColors.error;
+      case 'PendingDelivery':
+        return AppColors.error;
+      case 'Shipping':
+        return AppColors.error;
+      case 'Delivered':
+        return AppColors.error;
+      case 'Completed':
+        return AppColors.error;
+      case 'Canceled':
+        return AppColors.error;
+      case 'Fail':
         return AppColors.error;
       default:
         return AppColors.grey;
@@ -961,15 +960,27 @@ class _OrderDetailPageState extends State<OrderDetailPage>
 
   IconData _getStatusIcon() {
     switch (widget.order.orderStatus) {
-      case 0:
+      case 'Created':
         return Icons.receipt_rounded;
-      case 1:
+      case 'Paid':
         return Icons.payment_rounded;
-      case 2:
+      case 'PendingChecked':
         return Icons.local_shipping_rounded;
-      case 3:
+      case 'PendingConfirm':
         return Icons.check_circle_rounded;
-      case 4:
+      case 'PendingPickup':
+        return Icons.error_rounded;
+      case 'PendingDelivery':
+        return Icons.error_rounded;
+      case 'Shipping':
+        return Icons.error_rounded;
+      case 'Delivered':
+        return Icons.error_rounded;
+      case 'Completed':
+        return Icons.error_rounded;
+      case 'Canceled':
+        return Icons.error_rounded;
+      case 'Fail':
         return Icons.error_rounded;
       default:
         return Icons.help_rounded;
@@ -978,18 +989,323 @@ class _OrderDetailPageState extends State<OrderDetailPage>
 
   String _getStatusDescription() {
     switch (widget.order.orderStatus) {
-      case 0:
+      case 'Created':
         return 'Đơn hàng đã được tạo và đang chờ xử lý';
-      case 1:
+      case 'Paid':
         return 'Đơn hàng đã được thanh toán thành công';
-      case 2:
+      case 'PendingChecked':
         return 'Đơn hàng đang được vận chuyển đến bạn';
-      case 3:
+      case 'PendingConfirm':
         return 'Đơn hàng đã được giao thành công';
-      case 4:
+      case 'PendingPickup':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'PendingDelivery':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'Shipping':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'Delivered':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'Completed':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'Canceled':
+        return 'Đơn hàng gặp sự cố trong quá trình xử lý';
+      case 'Fail':
         return 'Đơn hàng gặp sự cố trong quá trình xử lý';
       default:
         return 'Trạng thái đơn hàng không xác định';
+    }
+  }
+
+  bool _canCancelOrder() {
+    // Chỉ cho phép hủy đơn hàng khi trạng thái là "Đã thanh toán" hoặc các trạng thái trước đó
+    final cancelableStatuses = ['Created', 'Paid'];
+    final currentStatusIndex = _getOrderStatusIndex(widget.order.orderStatus);
+    final paidStatusIndex = _getOrderStatusIndex('Paid');
+    
+    return currentStatusIndex <= paidStatusIndex && cancelableStatuses.contains(widget.order.orderStatus);
+  }
+
+  int _getOrderStatusIndex(String status) {
+    final orderStatuses = [
+      'Created',      // 0: Đã tạo
+      'Paid',         // 1: Đã thanh toán
+      'PendingChecked', // 2: Đang giao
+      'PendingConfirm', // 3: Hoàn thành
+      'Canceled',     // 4: Đã hủy
+      'Fail'          // 5: Thất bại
+    ];
+    
+    return orderStatuses.indexOf(status);
+  }
+
+  Widget _buildCancelOrderButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: ResponsiveHelper.getLargeSpacing(context),
+        vertical: ResponsiveHelper.getSpacing(context),
+      ),
+      child: ElevatedButton(
+        onPressed: _showCancelConfirmation,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.error.withOpacity(0.1),
+          foregroundColor: AppColors.error,
+          elevation: 0,
+          padding: EdgeInsets.symmetric(
+            horizontal: ResponsiveHelper.getExtraLargeSpacing(context),
+            vertical: ResponsiveHelper.getLargeSpacing(context),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: AppColors.error.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cancel_rounded, size: 20),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              'Hủy đơn hàng',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.error,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCancelConfirmation() {
+    final TextEditingController reasonController = TextEditingController();
+    bool isReasonEmpty = true;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.warning_rounded,
+                      color: AppColors.error,
+                      size: ResponsiveHelper.getIconSize(context, 30),
+                    ),
+                  ),
+                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+                  Text(
+                    'Xác nhận hủy đơn hàng',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vui lòng cho biết lý do hủy đơn hàng:',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isReasonEmpty ? AppColors.error : Colors.grey.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: reasonController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Nhập lý do hủy đơn hàng...',
+                        hintStyle: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 14,
+                          color: Colors.grey,
+                        ),
+                        contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                        border: InputBorder.none,
+                      ),
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 14,
+                        color: AppColors.text,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          isReasonEmpty = value.trim().isEmpty;
+                        });
+                      },
+                    ),
+                  ),
+                  if (isReasonEmpty) ...[
+                    SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                    Text(
+                      'Vui lòng nhập lý do hủy đơn hàng',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 12,
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: ResponsiveHelper.getLargeSpacing(context),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            side: BorderSide(
+                              color: AppColors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'Không',
+                            style: ResponsiveHelper.responsiveTextStyle(
+                              context: context,
+                              baseSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isReasonEmpty ? null : () {
+                            Navigator.of(context).pop();
+                            _cancelOrder(reasonController.text.trim());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            disabledBackgroundColor: AppColors.error.withOpacity(0.5),
+                            padding: EdgeInsets.symmetric(
+                              vertical: ResponsiveHelper.getLargeSpacing(context),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            'Hủy đơn',
+                            style: ResponsiveHelper.responsiveTextStyle(
+                              context: context,
+                              baseSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              contentPadding: EdgeInsets.all(ResponsiveHelper.getExtraLargeSpacing(context)),
+            );
+          }
+        );
+      },
+    ).then((_) {
+      reasonController.dispose();
+    });
+  }
+
+  Future<void> _cancelOrder(String reason) async {
+    try {
+      final result = await _orderService.cancelOrder(widget.order.id, reason);
+      if (!mounted) return;
+
+      if (result.isSuccess) {
+        // Cập nhật trạng thái đơn hàng trong widget
+        // setState(() {
+        //   widget.order.orderStatus = 'Canceled';
+        // });
+
+        // Hiển thị thông báo thành công
+        Navigator.of(context).pop(true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.message ?? 'Đã hủy đơn hàng thành công',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 14,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        // Trả về kết quả để parent widget biết cần refresh
+      } else {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Không thể hủy đơn hàng: ${e.toString()}',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 14,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
     }
   }
 
@@ -1013,4 +1329,4 @@ class _OrderDetailPageState extends State<OrderDetailPage>
       ),
     );
   }
-}
+} 

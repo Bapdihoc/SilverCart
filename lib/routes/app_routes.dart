@@ -1,11 +1,11 @@
 import 'package:go_router/go_router.dart';
-import 'package:flutter/material.dart';
 import 'package:silvercart/page/home.dart';
 import 'package:silvercart/page/auth/role_selection_page.dart';
 import 'package:silvercart/page/auth/login_page.dart';
 import 'package:silvercart/page/auth/elderly_login_page.dart';
 import 'package:silvercart/page/auth/register_page.dart';
 import 'package:silvercart/page/settings/user_profile_page.dart';
+import 'package:silvercart/page/payment/payment_callback_page.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -14,7 +14,8 @@ class AppRouter {
       final uri = state.uri;
       // Normalize external deeplinks like silvercart://payment/callback?status=...
       if (uri.scheme == 'silvercart') {
-        if (uri.path == '/payment/callback') {
+        final combinedPath = '/${uri.host}${uri.path}';
+        if (combinedPath == '/payment/callback') {
           final status = uri.queryParameters['status'] ?? 'success';
           return '/payment/callback?status=$status';
         }
@@ -65,34 +66,4 @@ class AppRouter {
     ],
   );
 }
-
-class PaymentCallbackPage extends StatelessWidget {
-  final String status;
-  const PaymentCallbackPage({super.key, required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Future.microtask(() {
-      // Pop back to previous page after a brief delay
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(status);
-      } else {
-        // If no back stack, navigate to home
-        context.go('/home');
-      }
-    });
-
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Đang xử lý…')
-          ],
-        ),
-      ),
-    );
-  }
-}
+ 

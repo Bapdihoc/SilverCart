@@ -9,52 +9,50 @@ part of 'elder_list_response.dart';
 ElderListResponse _$ElderListResponseFromJson(Map<String, dynamic> json) =>
     ElderListResponse(
       message: json['message'] as String,
-      data: (json['data'] as List<dynamic>)
-          .map((e) => ElderData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      data:
+          (json['data'] as List<dynamic>)
+              .map((e) => ElderData.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$ElderListResponseToJson(ElderListResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 ElderData _$ElderDataFromJson(Map<String, dynamic> json) => ElderData(
-      id: json['id'] as String,
-      fullName: json['fullName'] as String,
-      userName: json['userName'] as String,
-      description: json['description'] as String?,
-      birthDate: DateTime.parse(json['birthDate'] as String),
-      spendLimit: (json['spendLimit'] as num).toDouble(),
-      emergencyPhoneNumber: json['emergencyPhoneNumber'] as String,
-      relationShip: json['relationShip'] as String,
-      isDelete: json['isDelete'] as bool,
-      avatar: json['avatar'] as String?,
-      gender: (json['gender'] as num).toInt(),
-      addresses: (json['addresses'] as List<dynamic>)
+  id: json['id'] as String,
+  fullName: json['fullName'] as String,
+  userName: json['userName'] as String,
+  description: json['description'] as String?,
+  birthDate: DateTime.parse(json['birthDate'] as String),
+  spendLimit: (json['spendLimit'] as num).toDouble(),
+  emergencyPhoneNumber: json['emergencyPhoneNumber'] as String,
+  relationShip: json['relationShip'] as String,
+  isDelete: json['isDelete'] as bool,
+  avatar: json['avatar'] as String?,
+  gender: (json['gender'] as num).toInt(),
+  addresses:
+      (json['addresses'] as List<dynamic>)
           .map((e) => ElderAddressData.fromJson(e as Map<String, dynamic>))
           .toList(),
-      categories: (json['categories'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
-    );
+  categories:
+      (json['categories'] as List<dynamic>).map((e) => e as String).toList(),
+);
 
 Map<String, dynamic> _$ElderDataToJson(ElderData instance) => <String, dynamic>{
-      'id': instance.id,
-      'fullName': instance.fullName,
-      'userName': instance.userName,
-      'description': instance.description,
-      'birthDate': instance.birthDate.toIso8601String(),
-      'spendLimit': instance.spendLimit,
-      'emergencyPhoneNumber': instance.emergencyPhoneNumber,
-      'relationShip': instance.relationShip,
-      'isDelete': instance.isDelete,
-      'avatar': instance.avatar,
-      'gender': instance.gender,
-      'addresses': instance.addresses,
-      'categories': instance.categories,
-    };
+  'id': instance.id,
+  'fullName': instance.fullName,
+  'userName': instance.userName,
+  'description': instance.description,
+  'birthDate': instance.birthDate.toIso8601String(),
+  'spendLimit': instance.spendLimit,
+  'emergencyPhoneNumber': instance.emergencyPhoneNumber,
+  'relationShip': instance.relationShip,
+  'isDelete': instance.isDelete,
+  'avatar': instance.avatar,
+  'gender': instance.gender,
+  'addresses': instance.addresses,
+  'categories': instance.categories,
+};
 
 ElderAddressData _$ElderAddressDataFromJson(Map<String, dynamic> json) =>
     ElderAddressData(

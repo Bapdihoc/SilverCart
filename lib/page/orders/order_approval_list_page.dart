@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:silvercart/core/utils/responsive_helper.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/network/service/auth_service.dart';
 import 'package:silvercart/network/service/order_service.dart';
@@ -9,7 +8,7 @@ import '../../core/constants/app_colors.dart';
 import '../../models/elder_carts_response.dart';
 import '../../network/service/cart_service.dart';
 import '../../injection.dart';
-import 'order_detail_page.dart';
+import 'cart_approval_detail_page.dart';
 
 class OrderApprovalListPage extends StatefulWidget {
   const OrderApprovalListPage({super.key});
@@ -30,6 +29,7 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
   
   List<ElderCartData> _allCarts = [];
   bool _isLoading = true;
+  bool _isRefreshing = false; // For tab change refresh
   String? _errorMessage;
 
   final List<String> _sortOptions = ['Mới nhất', 'Cũ nhất', 'Giá thấp', 'Giá cao'];
@@ -47,11 +47,22 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
     _cartService = getIt<CartService>();
     _authService = getIt<AuthService>();
     _orderService = getIt<OrderService>();
+    
+    // Add listener to refresh data when tab changes
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _refreshDataOnTabChange();
+      }
+    });
+    
     _loadElderCarts();
   }
 
   Future<void> _loadElderCarts() async {
     setState(() {
+      if (!_isLoading) {
+        _isRefreshing = true; // Only set refreshing if not initial load
+      }
       _isLoading = true;
       _errorMessage = null;
     });
@@ -63,17 +74,20 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
         setState(() {
           _allCarts = result.data!.data;
           _isLoading = false;
+          _isRefreshing = false;
         });
       } else {
         setState(() {
           _errorMessage = result.message ?? 'Không thể tải danh sách đơn hàng';
           _isLoading = false;
+          _isRefreshing = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Lỗi tải dữ liệu: ${e.toString()}';
         _isLoading = false;
+        _isRefreshing = false;
       });
     }
   }
@@ -127,6 +141,20 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        actions: [
+          if (_isRefreshing)
+            Container(
+              margin: const EdgeInsets.all(16),
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(200),
           child: Container(
@@ -383,28 +411,16 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
         ],
       ),
               child: InkWell(
-        onTap: () {
-          // Convert cart to order format for OrderDetailPage
-          final orderData = {
-            'id': cart.cartId,
-            'elderlyName': cart.elderName,
-            'customerName': cart.customerName,
-            'totalAmount': cart.totalAmount,
-            'itemCount': cart.itemCount,
-            'status': cart.status.toLowerCase(),
-            'items': cart.items.map((item) => {
-              'name': item.productName,
-              'quantity': item.quantity,
-              'price': item.productPrice,
-            }).toList(),
-          };
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CartApprovalDetailPage(cart: cart),
+            ),
+          );
           
-          // Navigator.push(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => OrderDetailPage(order: orderData),
-          //   ),
-          // );
+          // Always refresh the list when returning from detail page
+          _loadElderCarts();
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -546,95 +562,10 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
       ),
     );
   }
-  void _showSuccessDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: ResponsiveHelper.getIconSize(context, 40),
-              height: ResponsiveHelper.getIconSize(context, 40),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.success,
-                size: 20,
-              ),
-            ),
-            SizedBox(width: ResponsiveHelper.getSpacing(context)),
-            Text(
-              'Đặt hàng thành công!',
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
-                baseSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: ResponsiveHelper.responsiveTextStyle(
-            context: context,
-            baseSize: 16,
-            color: AppColors.text,
-          ),
-        ),
-        actions: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.success, AppColors.success.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.success.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Go back to previous page
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'OK',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Future<void> _approveCart(ElderCartData cart) async {
     try {
-      String userId = await getIt<AuthService>().getUserId() ?? '';
       final dataElder = await _authService.getUserDetail(cart.elderId);
       if(dataElder.isSuccess && dataElder.data != null){
         String addressId = dataElder.data!.data.addresses[0].id;
@@ -651,21 +582,8 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
               SnackBar(content: Text('Thanh toán thất bại hoặc bị hủy'), backgroundColor: AppColors.error),
             );
           }
-        // Update local data
-        setState(() {
-          final index = _allCarts.indexWhere((c) => c.cartId == cart.cartId);
-          if (index != -1) {
-            _allCarts[index] = ElderCartData(
-              cartId: cart.cartId,
-              customerId: cart.customerId,
-              customerName: cart.customerName,
-              elderId: cart.elderId,
-              elderName: cart.elderName,
-              status: 'Approve',
-              items: cart.items,
-            );
-          }
-        });
+        // Refresh data from API instead of local update
+        await _loadElderCarts();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -742,21 +660,8 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
       final result = await _cartService.changeCartStatus(cart.cartId, 3);
       
       if (result.isSuccess) {
-        // Update local data
-        setState(() {
-          final index = _allCarts.indexWhere((c) => c.cartId == cart.cartId);
-          if (index != -1) {
-            _allCarts[index] = ElderCartData(
-              cartId: cart.cartId,
-              customerId: cart.customerId,
-              customerName: cart.customerName,
-              elderId: cart.elderId,
-              elderName: cart.elderName,
-              status: 'Reject',
-              items: cart.items,
-            );
-          }
-        });
+        // Refresh data from API instead of local update
+        await _loadElderCarts();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -784,6 +689,32 @@ class _OrderApprovalListPageState extends State<OrderApprovalListPage>
       );
     }
   }
-}
 
- 
+  Future<void> _refreshDataOnTabChange() async {
+    // Only refresh if not already loading
+    if (!_isLoading) {
+      setState(() {
+        _isRefreshing = true;
+      });
+      
+      try {
+        final result = await _cartService.getAllElderCarts();
+        
+        if (result.isSuccess && result.data != null) {
+          setState(() {
+            _allCarts = result.data!.data;
+            _isRefreshing = false;
+          });
+        } else {
+          setState(() {
+            _isRefreshing = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
+  }
+}

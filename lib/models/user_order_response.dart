@@ -23,8 +23,8 @@ class UserOrderData {
   final String id;
   final double totalPrice;
   final String note;
-  final int orderStatus;
-  final String elderName;
+  final String orderStatus;
+  final String? elderName;
   final List<UserOrderDetail> orderDetails;
 
   UserOrderData({
@@ -44,15 +44,38 @@ class UserOrderData {
   // Helper method to get order status text
   String get orderStatusText {
     switch (orderStatus) {
-      case 0:
+      // Created,         // Đã tạo
+      //   Paid,            // Đã thanh toán
+      //   PendingChecked,  // Chờ kiểm tra
+      //   PendingConfirm,  // Chờ xác nhận
+      //   PendingPickup,   // Chờ lấy hàng
+      //   PendingDelivery, // Chờ giao hàng
+      //   Shipping,        // Đang giao
+      //   Delivered,       // Đã giao
+      //   Completed,       // Hoàn tất
+      //   Canceled,        // Đã hủy
+      //   Fail             // Thất bại
+      case 'Created':
         return 'Đã tạo';
-      case 1:
+      case 'Paid':
         return 'Đã thanh toán';
-      case 2:
+      case 'PendingChecked':
+        return 'Chờ kiểm tra';
+      case 'PendingConfirm':
+        return 'Chờ xác nhận';
+      case 'PendingPickup':
+        return 'Chờ lấy hàng';
+      case 'PendingDelivery':
+        return 'Chờ giao hàng';
+      case 'Shipping':
         return 'Đang giao';
-      case 3:
-        return 'Hoàn thành';
-      case 4:
+      case 'Delivered':
+        return 'Đã giao';
+      case 'Completed':
+        return 'Hoàn tất';
+      case 'Canceled':
+        return 'Đã hủy';
+      case 'Fail':
         return 'Thất bại';
       default:
         return 'Không xác định';
@@ -62,16 +85,28 @@ class UserOrderData {
   // Helper method to get order status color
   String get orderStatusColor {
     switch (orderStatus) {
-      case 0:
+      case 'Created':
         return 'blue'; // Created
-      case 1:
+      case 'Paid':
         return 'orange'; // Paid
-      case 2:
+      case 'PendingChecked':
         return 'purple'; // Shipping
-      case 3:
+      case 'PendingConfirm':
         return 'green'; // Completed
-      case 4:
-        return 'red'; // Failed
+      case 'PendingPickup':
+        return 'red'; // PendingPickup
+      case 'PendingDelivery':
+        return 'red'; // PendingDelivery
+      case 'Shipping':
+        return 'red'; // Shipping
+      case 'Delivered':
+        return 'red'; // Delivered
+      case 'Completed':
+        return 'green'; // Completed
+      case 'Canceled':
+        return 'red'; // Canceled
+      case 'Fail':
+        return 'red'; // Fail
       default:
         return 'grey';
     }

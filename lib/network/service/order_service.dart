@@ -4,6 +4,7 @@ import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
+import 'package:silvercart/models/order_statistic_response.dart';
 import 'package:silvercart/network/repositories/order/order_respository.dart';
 
 @LazySingleton()
@@ -24,7 +25,19 @@ class OrderService {
     return await _repo.createOrder(request);
   }
 
+  Future<BaseResponse<CreateOrderResponse>> checkoutByWallet(CreateOrderRequest request) async {
+    return await _repo.checkoutByWallet(request);
+  }
+
   Future<BaseResponse<UserOrderResponse>> getUserOrders() async {
     return await _repo.getUserOrders();
+  }
+
+  Future<BaseResponse<OrderStatisticResponse>> getUserStatistic(String userId) async {
+    return await _repo.getUserStatistic(userId);
+  }
+
+  Future<BaseResponse<void>> cancelOrder(String orderId, String cancelReason) async {
+    return await _repo.cancelOrder(orderId, cancelReason);
   }
 }

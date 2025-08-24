@@ -5,6 +5,7 @@ import 'package:silvercart/injection.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/user_me_response.dart';
+import '../support/support_chat_page.dart';
 
 class GuardianSettingsPage extends StatefulWidget {
   const GuardianSettingsPage({super.key});
@@ -70,133 +71,127 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       child: Row(
         children: [
-          Text(
-            '⚙️ Cài đặt',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.edit_outlined,
-              size: ResponsiveHelper.getIconSize(context, 20),
-              color: AppColors.primary,
-            ),
-          ),
+   
+          // Container(
+          //   padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: Colors.black.withOpacity(0.05),
+          //         blurRadius: 10,
+          //         offset: const Offset(0, 2),
+          //       ),
+          //     ],
+          //   ),
+          //   child: Icon(
+          //     Icons.edit_outlined,
+          //     size: ResponsiveHelper.getIconSize(context, 20),
+          //     color: AppColors.primary,
+          //   ),
+          // ),
         ],
       ),
     );
   }
 
   Widget _buildProfileSection() {
-    return Container(
-      margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return GestureDetector(
+      onTap: () => context.push('/user-profile'),
+      child: Container(
+        margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary,
+              AppColors.primary.withOpacity(0.8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: ResponsiveHelper.getIconSize(context, 70),
-            height: ResponsiveHelper.getIconSize(context, 70),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 35)),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 2,
+          borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context) * 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: ResponsiveHelper.getIconSize(context, 70),
+              height: ResponsiveHelper.getIconSize(context, 70),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 35)),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.person,
+                size: ResponsiveHelper.getIconSize(context, 35),
+                color: Colors.white,
               ),
             ),
-            child: Icon(
-              Icons.person,
-              size: ResponsiveHelper.getIconSize(context, 35),
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _me?.userName ?? '—',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                // Text(
-                //   _me?.userId ?? '—',
-                //   style: ResponsiveHelper.responsiveTextStyle(
-                //     context: context,
-                //     baseSize: 14,
-                //     color: Colors.white.withOpacity(0.9),
-                //   ),
-                // ),
-                // SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getSpacing(context),
-                    vertical: ResponsiveHelper.getSpacing(context) / 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
-                  ),
-                  child: Text(
-                    _me == null ? 'Đang tải...' : '👑 Vai trò: ${_me!.role}',
+            SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _me?.userName ?? '—',
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 12,
+                      fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                  // Text(
+                  //   _me?.userId ?? '—',
+                  //   style: ResponsiveHelper.responsiveTextStyle(
+                  //     context: context,
+                  //     baseSize: 14,
+                  //     color: Colors.white.withOpacity(0.9),
+                  //   ),
+                  // ),
+                  // SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveHelper.getSpacing(context),
+                      vertical: ResponsiveHelper.getSpacing(context) / 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(ResponsiveHelper.getBorderRadius(context)),
+                    ),
+                    child: Text(
+                      _me == null ? 'Đang tải...' : '👑 Vai trò: ${_me!.role}',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: ResponsiveHelper.getIconSize(context, 16),
-            color: Colors.white.withOpacity(0.8),
-          ),
-        ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: ResponsiveHelper.getIconSize(context, 16),
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -204,72 +199,72 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
   Widget _buildSettingsSections() {
     return Column(
       children: [
-        _buildSettingsSection(
-          title: '👥 Quản lý tài khoản',
-          items: [
-            _buildSettingsItem(
-              icon: '📱',
-              title: 'Thông tin cá nhân',
-              subtitle: 'Cập nhật thông tin cá nhân',
-              onTap: () => context.push('/user-profile'),
-            ),
-            _buildSettingsItem(
-              icon: '🔔',
-              title: 'Thông báo',
-              subtitle: 'Quản lý thông báo ứng dụng',
-              trailing: Switch(
-                value: _notificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _notificationsEnabled = value;
-                  });
-                },
-                activeColor: AppColors.primary,
-              ),
-              onTap: () {},
-            ),
-            _buildSettingsItem(
-              icon: '🔐',
-              title: 'Bảo mật',
-              subtitle: 'Mật khẩu và xác thực 2 bước',
-              onTap: () {},
-            ),
-            _buildSettingsItem(
-              icon: '🆔',
-              title: 'Xác thực sinh trắc học',
-              subtitle: 'Vân tay và Face ID',
-              trailing: Switch(
-                value: _biometricEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _biometricEnabled = value;
-                  });
-                },
-                activeColor: AppColors.primary,
-              ),
-              onTap: () {},
-            ),
-          ],
-        ),
+        // _buildSettingsSection(
+        //   title: '👥 Quản lý tài khoản',
+        //   items: [
+        //     _buildSettingsItem(
+        //       icon: '📱',
+        //       title: 'Thông tin cá nhân',
+        //       subtitle: 'Cập nhật thông tin cá nhân',
+        //       onTap: () => context.push('/user-profile'),
+        //     ),
+        //     // _buildSettingsItem(
+        //     //   icon: '🔔',
+        //     //   title: 'Thông báo',
+        //     //   subtitle: 'Quản lý thông báo ứng dụng',
+        //     //   trailing: Switch(
+        //     //     value: _notificationsEnabled,
+        //     //     onChanged: (value) {
+        //     //       setState(() {
+        //     //         _notificationsEnabled = value;
+        //     //       });
+        //     //     },
+        //     //     activeColor: AppColors.primary,
+        //     //   ),
+        //     //   onTap: () {},
+        //     // ),
+        //     // _buildSettingsItem(
+        //     //   icon: '🔐',
+        //     //   title: 'Bảo mật',
+        //     //   subtitle: 'Mật khẩu và xác thực 2 bước',
+        //     //   onTap: () {},
+        //     // ),
+        //     // _buildSettingsItem(
+        //     //   icon: '🆔',
+        //     //   title: 'Xác thực sinh trắc học',
+        //     //   subtitle: 'Vân tay và Face ID',
+        //     //   trailing: Switch(
+        //     //     value: _biometricEnabled,
+        //     //     onChanged: (value) {
+        //     //       setState(() {
+        //     //         _biometricEnabled = value;
+        //     //       });
+        //     //     },
+        //     //     activeColor: AppColors.primary,
+        //     //   ),
+        //     //   onTap: () {},
+        //     // ),
+        //   ],
+        // ),
         
         _buildSettingsSection(
           title: '🎨 Giao diện & Ngôn ngữ',
           items: [
-            _buildSettingsItem(
-              icon: '🌙',
-              title: 'Chế độ tối',
-              subtitle: 'Giao diện tối bảo vệ mắt',
-              trailing: Switch(
-                value: _darkModeEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _darkModeEnabled = value;
-                  });
-                },
-                activeColor: AppColors.primary,
-              ),
-              onTap: () {},
-            ),
+            // _buildSettingsItem(
+            //   icon: '🌙',
+            //   title: 'Chế độ tối',
+            //   subtitle: 'Giao diện tối bảo vệ mắt',
+            //   trailing: Switch(
+            //     value: _darkModeEnabled,
+            //     onChanged: (value) {
+            //       setState(() {
+            //         _darkModeEnabled = value;
+            //       });
+            //     },
+            //     activeColor: AppColors.primary,
+            //   ),
+            //   onTap: () {},
+            // ),
             _buildSettingsItem(
               icon: '🌍',
               title: 'Ngôn ngữ',
@@ -285,29 +280,29 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
           ],
         ),
 
-        _buildSettingsSection(
-          title: '👨‍👩‍👧‍👦 Quản lý gia đình',
-          items: [
-            _buildSettingsItem(
-              icon: '👴',
-              title: 'Danh sách người thân',
-              subtitle: '3 người thân đang quản lý',
-              onTap: () {},
-            ),
-            _buildSettingsItem(
-              icon: '🏠',
-              title: 'Địa chỉ giao hàng',
-              subtitle: '5 địa chỉ đã lưu',
-              onTap: () {},
-            ),
-            _buildSettingsItem(
-              icon: '💳',
-              title: 'Phương thức thanh toán',
-              subtitle: 'Quản lý thẻ và ví điện tử',
-              onTap: () {},
-            ),
-          ],
-        ),
+        // _buildSettingsSection(
+        //   title: '👨‍👩‍👧‍👦 Quản lý gia đình',
+        //   items: [
+        //     _buildSettingsItem(
+        //       icon: '👴',
+        //       title: 'Danh sách người thân',
+        //       subtitle: '3 người thân đang quản lý',
+        //       onTap: () {},
+        //     ),
+        //     _buildSettingsItem(
+        //       icon: '🏠',
+        //       title: 'Địa chỉ giao hàng',
+        //       subtitle: '5 địa chỉ đã lưu',
+        //       onTap: () {},
+        //     ),
+        //     _buildSettingsItem(
+        //       icon: '💳',
+        //       title: 'Phương thức thanh toán',
+        //       subtitle: 'Quản lý thẻ và ví điện tử',
+        //       onTap: () {},
+        //     ),
+        //   ],
+        // ),
 
         _buildSettingsSection(
           title: '🛡️ Hỗ trợ & Bảo mật',
@@ -322,7 +317,11 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
               icon: '💬',
               title: 'Liên hệ hỗ trợ',
               subtitle: 'Chat với đội ngũ hỗ trợ',
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SupportChatPage()),
+                );
+              },
             ),
             _buildSettingsItem(
               icon: '⭐',

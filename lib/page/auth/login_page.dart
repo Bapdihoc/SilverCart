@@ -302,23 +302,23 @@ class _LoginPageState extends State<LoginPage> {
                           SizedBox(height: ResponsiveHelper.getSpacing(context)),
 
                           // Forgot Password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                // TODO: Navigate to forgot password page
-                              },
-                              child: Text(
-                                'Quên mật khẩu?',
-                                style: ResponsiveHelper.responsiveTextStyle(
-                                  context: context,
-                                  baseSize: 14,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
+                          // Align(
+                          //   alignment: Alignment.centerRight,
+                          //   child: TextButton(
+                          //     onPressed: () {
+                          //       // TODO: Navigate to forgot password page
+                          //     },
+                          //     child: Text(
+                          //       'Quên mật khẩu?',
+                          //       style: ResponsiveHelper.responsiveTextStyle(
+                          //         context: context,
+                          //         baseSize: 14,
+                          //         color: AppColors.primary,
+                          //         fontWeight: FontWeight.w500,
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ),
 
                           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 

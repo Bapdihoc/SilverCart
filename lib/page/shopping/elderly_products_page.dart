@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
@@ -284,11 +285,10 @@ class _ElderlyProductsPageState extends State<ElderlyProductsPage> {
               ),
             ),
             child: Center(
-              child: Text(
-                product['image'] ?? product['emoji'] ?? '📦',
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.getIconSize(context, 60),
-                ),
+              child:CachedNetworkImage(
+                imageUrl: product['imageUrl'] ?? '',
+                placeholder: (context, url) => CircularProgressIndicator(),
+                errorWidget: (context, url, error) => Icon(Icons.error),
               ),
             ),
           ),

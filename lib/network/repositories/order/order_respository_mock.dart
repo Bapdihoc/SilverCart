@@ -3,6 +3,7 @@ import 'package:silvercart/models/creating_elder_request.dart';
 import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
+import 'package:silvercart/models/order_statistic_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
 import 'package:silvercart/network/repositories/order/order_respository.dart';
 import 'package:injectable/injectable.dart';
@@ -33,6 +34,19 @@ class OrderRespositoryMock implements OrderRespository {
   }
 
   @override
+  Future<BaseResponse<CreateOrderResponse>> checkoutByWallet(CreateOrderRequest request) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    // Return success message for wallet payment (no payment URL needed)
+    return BaseResponse.success(
+      data: CreateOrderResponse(
+        message: 'Đặt hàng thành công! Đã thanh toán bằng ví',
+        data: null, // No payment URL for wallet payment
+      ),
+    );
+  }
+
+  @override
   Future<BaseResponse<UserOrderResponse>> getUserOrders() async {
     // Simulate API delay
     await Future.delayed(const Duration(milliseconds: 800));
@@ -46,7 +60,7 @@ class OrderRespositoryMock implements OrderRespository {
             id: 'f7fb58f5-9bcf-4ea2-3a08-08ddd9041d9f',
             totalPrice: 1560000,
             note: 'Giao hàng nhanh',
-            orderStatus: 1, // Paid
+            orderStatus: 'Paid', // Paid
             elderName: 'Bà Nguyễn Thị A',
             orderDetails: [
               UserOrderDetail(
@@ -70,7 +84,7 @@ class OrderRespositoryMock implements OrderRespository {
             id: 'a8fc58f5-9bcf-4ea2-3b09-08ddd9041d9g',
             totalPrice: 650000,
             note: '',
-            orderStatus: 2, // Shipping
+            orderStatus: 'PendingChecked', // Shipping
             elderName: 'Ông Trần Văn B',
             orderDetails: [
               UserOrderDetail(
@@ -89,7 +103,7 @@ class OrderRespositoryMock implements OrderRespository {
             id: 'b9fd58f5-9bcf-4ea2-3c10-08ddd9041d9h',
             totalPrice: 320000,
             note: 'Để ngoài cửa',
-            orderStatus: 3, // Completed
+              orderStatus: 'PendingConfirm', // Completed
             elderName: 'Bà Lê Thị C',
             orderDetails: [
               UserOrderDetail(
@@ -107,5 +121,19 @@ class OrderRespositoryMock implements OrderRespository {
         ],
       ),
     );
+  }
+
+  @override
+  Future<BaseResponse<OrderStatisticResponse>> getUserStatistic(String userId) async {
+    return BaseResponse.success(data: OrderStatisticResponse(message: 'Get user statistic successfully', data: OrderStatisticData(
+      totalCount: 10,
+      totalOrderToPending: 10,
+      totalOrderComplete: 10,
+    )));
+  }
+
+  @override
+  Future<BaseResponse<void>> cancelOrder(String orderId, String reason) async {
+    return BaseResponse.success(data: null);
   }
 }

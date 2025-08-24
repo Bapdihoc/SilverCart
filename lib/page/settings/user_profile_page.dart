@@ -46,7 +46,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         setState(() {
           _user = result.data;
           _nameController.text = _user?.userName ?? '';
-          _emailController.text = '';
+          _emailController.text = _user?.userName ?? '';
           _phoneController.text = '';
         });
       } else {
@@ -124,7 +124,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     _buildHeader(),
                     _buildProfileAvatar(),
                     _buildUserInfoCard(),
-                    _buildAccountStatsCard(),
+                    // _buildAccountStatsCard(),
                     SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
                   ],
                 ),
@@ -158,7 +158,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             '👤 Thông tin cá nhân',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
-              baseSize: 24,
+              baseSize: 22,
               fontWeight: FontWeight.bold,
               color: AppColors.text,
             ),
@@ -265,16 +265,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         children: [
           Row(
             children: [
-              Text(
-                '📋 Thông tin chi tiết',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
-                ),
-              ),
-              const Spacer(),
+      
               if (_isEditing) ...[
                 TextButton(
                   onPressed: _toggleEditMode,
@@ -314,13 +305,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          _buildInfoField(
-            icon: '👤',
-            label: 'Tên đăng nhập',
-            controller: _nameController,
-            enabled: _isEditing,
-          ),
-          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          // _buildInfoField(
+          //   icon: '👤',
+          //   label: 'Tên đăng nhập',
+          //   controller: _nameController,
+          //   enabled: _isEditing,
+          // ),
+          // SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           _buildInfoField(
             icon: '📧',
             label: 'Email',

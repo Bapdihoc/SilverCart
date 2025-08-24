@@ -9,27 +9,26 @@ part of 'user_order_response.dart';
 UserOrderResponse _$UserOrderResponseFromJson(Map<String, dynamic> json) =>
     UserOrderResponse(
       message: json['message'] as String,
-      data: (json['data'] as List<dynamic>)
-          .map((e) => UserOrderData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      data:
+          (json['data'] as List<dynamic>)
+              .map((e) => UserOrderData.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$UserOrderResponseToJson(UserOrderResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 UserOrderData _$UserOrderDataFromJson(Map<String, dynamic> json) =>
     UserOrderData(
       id: json['id'] as String,
       totalPrice: (json['totalPrice'] as num).toDouble(),
       note: json['note'] as String,
-      orderStatus: (json['orderStatus'] as num).toInt(),
-      elderName: json['elderName'] as String,
-      orderDetails: (json['orderDetails'] as List<dynamic>)
-          .map((e) => UserOrderDetail.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      orderStatus: json['orderStatus'] as String,
+      elderName: json['elderName'] as String?,
+      orderDetails:
+          (json['orderDetails'] as List<dynamic>)
+              .map((e) => UserOrderDetail.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$UserOrderDataToJson(UserOrderData instance) =>

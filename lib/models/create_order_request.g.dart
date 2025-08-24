@@ -11,6 +11,7 @@ CreateOrderRequest _$CreateOrderRequestFromJson(Map<String, dynamic> json) =>
       cartId: json['cartId'] as String,
       note: json['note'] as String,
       addressId: json['addressId'] as String,
+      userPromotionId: json['userPromotionId'] as String?,
     );
 
 Map<String, dynamic> _$CreateOrderRequestToJson(CreateOrderRequest instance) =>
@@ -18,4 +19,5 @@ Map<String, dynamic> _$CreateOrderRequestToJson(CreateOrderRequest instance) =>
       'cartId': instance.cartId,
       'note': instance.note,
       'addressId': instance.addressId,
+      'userPromotionId': instance.userPromotionId,
     };

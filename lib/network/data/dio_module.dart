@@ -6,13 +6,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:injectable/injectable.dart';
 import 'error_interceptor.dart';
 import 'auth_interceptor.dart';
-import 'auth_api_service.dart';
-import 'product_api_service.dart';
-import 'order_api_service.dart';
-import 'location_api_service.dart';
-import 'elder_api_service.dart';
 import 'category_api_service.dart';
-import 'cart_api_service.dart';
+import 'promotion_api_service.dart';
+import 'payment_history_api_service.dart';
 
 @module
 abstract class DioModule {
@@ -49,4 +45,10 @@ abstract class DioModule {
 
   @LazySingleton()
   CategoryApiService provideCategoryApiService(Dio dio) => CategoryApiService(dio);
+
+  @LazySingleton()
+  PromotionApiService providePromotionApiService(Dio dio) => PromotionApiService(dio);
+
+  @LazySingleton()
+  PaymentHistoryApiService providePaymentHistoryApiService(Dio dio) => PaymentHistoryApiService(dio);
 } 

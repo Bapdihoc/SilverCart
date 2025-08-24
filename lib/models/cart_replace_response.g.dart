@@ -7,14 +7,8 @@ part of 'cart_replace_response.dart';
 // **************************************************************************
 
 CartReplaceResponse _$CartReplaceResponseFromJson(Map<String, dynamic> json) =>
-    CartReplaceResponse(
-      message: json['message'] as String,
-      data: json['data'],
-    );
+    CartReplaceResponse(message: json['message'] as String, data: json['data']);
 
 Map<String, dynamic> _$CartReplaceResponseToJson(
-        CartReplaceResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+  CartReplaceResponse instance,
+) => <String, dynamic>{'message': instance.message, 'data': instance.data};

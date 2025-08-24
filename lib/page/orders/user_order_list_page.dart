@@ -17,14 +17,36 @@ class UserOrderListPage extends StatefulWidget {
 class _UserOrderListPageState extends State<UserOrderListPage> {
   late final OrderService _orderService;
   List<UserOrderData> _orders = [];
+  List<UserOrderData> _filteredOrders = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String? _selectedStatus;
+
+  final List<Map<String, dynamic>> _orderStatusFilters = [
+    {'status': null, 'label': 'Tất cả', 'icon': Icons.list_alt_rounded},
+    {'status': 'Created', 'label': 'Đã tạo', 'icon': Icons.receipt_rounded},
+    {'status': 'Paid', 'label': 'Đã thanh toán', 'icon': Icons.payment_rounded},
+    {'status': 'PendingChecked', 'label': 'Đang giao', 'icon': Icons.local_shipping_rounded},
+    {'status': 'PendingConfirm', 'label': 'Hoàn thành', 'icon': Icons.check_circle_rounded},
+    {'status': 'Canceled', 'label': 'Đã hủy', 'icon': Icons.cancel_rounded},
+    {'status': 'Fail', 'label': 'Thất bại', 'icon': Icons.error_rounded},
+  ];
 
   @override
   void initState() {
     super.initState();
     _orderService = getIt<OrderService>();
     _loadOrders();
+  }
+
+  void _filterOrders() {
+    if (_selectedStatus == null) {
+      _filteredOrders = List.from(_orders);
+    } else {
+      _filteredOrders = _orders.where((order) => order.orderStatus == _selectedStatus).toList();
+    }
+    _filteredOrders = _filteredOrders.reversed.toList();
+
   }
 
   Future<void> _loadOrders() async {
@@ -39,6 +61,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
       if (result.isSuccess && result.data != null) {
         setState(() {
           _orders = result.data!.data;
+          _filterOrders();
           _isLoading = false;
         });
       } else {
@@ -235,6 +258,101 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
     );
   }
 
+  Widget _buildEmptyFilterState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: ResponsiveHelper.getIconSize(context, 100),
+            height: ResponsiveHelper.getIconSize(context, 100),
+            decoration: BoxDecoration(
+              color: AppColors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              Icons.filter_list_off_rounded,
+              size: ResponsiveHelper.getIconSize(context, 50),
+              color: AppColors.grey,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          Text(
+            'Không tìm thấy đơn hàng',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 22,
+              fontWeight: FontWeight.bold,
+              color: AppColors.text,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          Text(
+            'Không có đơn hàng nào phù hợp\nvới bộ lọc đã chọn',
+            textAlign: TextAlign.center,
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 16,
+              color: AppColors.grey,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _selectedStatus = null;
+                  _filterOrders();
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                padding: EdgeInsets.symmetric(
+                  horizontal: ResponsiveHelper.getExtraLargeSpacing(context),
+                  vertical: ResponsiveHelper.getLargeSpacing(context),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.filter_list_rounded, size: 20),
+                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                  Text(
+                    'Xóa bộ lọc',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -327,16 +445,76 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
     );
   }
 
+  Widget _buildFilterChips() {
+    return Container(
+      height: 50,
+      margin: EdgeInsets.symmetric(
+        vertical: ResponsiveHelper.getSpacing(context),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(
+          horizontal: ResponsiveHelper.getLargeSpacing(context),
+        ),
+        itemCount: _orderStatusFilters.length,
+        itemBuilder: (context, index) {
+          final filter = _orderStatusFilters[index];
+          final isSelected = _selectedStatus == filter['status'];
+          
+          return Padding(
+            padding: EdgeInsets.only(right: ResponsiveHelper.getSpacing(context)),
+            child: FilterChip(
+              selected: isSelected,
+              showCheckmark: false,
+              avatar: Icon(
+                filter['icon'] as IconData,
+                size: 18,
+                color: isSelected ? Colors.white : AppColors.grey,
+              ),
+              label: Text(
+                filter['label'] as String,
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.grey,
+                ),
+              ),
+              backgroundColor: Colors.white,
+              selectedColor: AppColors.primary,
+              padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getSpacing(context)),
+              onSelected: (bool selected) {
+                setState(() {
+                  _selectedStatus = selected ? filter['status'] : null;
+                  _filterOrders();
+                });
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildOrderList() {
     return RefreshIndicator(
       onRefresh: _loadOrders,
       color: AppColors.primary,
-      child: ListView.builder(
-        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-        itemCount: _orders.length,
-        itemBuilder: (context, index) {
-          return _buildOrderCard(_orders[index]);
-        },
+      child: Column(
+        children: [
+          _buildFilterChips(),
+          Expanded(
+            child: _filteredOrders.isEmpty
+                ? _buildEmptyFilterState()
+                : ListView.builder(
+                    padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                    itemCount: _filteredOrders.length,
+                    itemBuilder: (context, index) {
+                      return _buildOrderCard(_filteredOrders[index]);
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -363,11 +541,16 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.of(context).push(
+            Navigator.of(context).push<bool>(
               MaterialPageRoute(
                 builder: (context) => OrderDetailPage(order: order),
               ),
-            );
+            ).then((needRefresh) {
+              // Chỉ refresh khi có thay đổi (hủy đơn thành công)
+              if (needRefresh == true) {
+                _loadOrders();
+              }
+            });
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -391,7 +574,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                               color: AppColors.text,
                             ),
                           ),
-                          if (order.elderName.isNotEmpty) ...[
+                          if (order.elderName != null && order.elderName!.isNotEmpty) ...[
                             SizedBox(height: 4),
                             Row(
                               children: [
@@ -403,7 +586,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                                 SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    order.elderName,
+                                    order.elderName!,
                                     style: ResponsiveHelper.responsiveTextStyle(
                                       context: context,
                                       baseSize: 13,

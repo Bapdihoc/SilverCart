@@ -13,6 +13,8 @@ import '../../models/product_search_request.dart';
 import '../../models/product_search_response.dart';
 import '../../network/service/product_service.dart';
 import '../../network/service/category_service.dart';
+import '../../network/service/cart_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductGuardianPage extends StatefulWidget {
   const ProductGuardianPage({super.key});
@@ -47,6 +49,10 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   bool _isLoadingSubCategories = false;
   late final CategoryService _categoryService;
   late final ProductService _productService;
+  late final CartService _cartService;
+
+  // Cart data
+  int _cartItemCount = 0;
 
   final List<String> _sortOptions = [
     'Mới nhất',
@@ -61,6 +67,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     super.initState();
     _categoryService = getIt<CategoryService>();
     _productService = getIt<ProductService>();
+    _cartService = getIt<CartService>();
     
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -85,6 +92,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
 
     _loadCategories();
     _searchProductsByCategory(); // Load all products initially
+    _loadCartItemCount(); // Load cart item count
   }
 
   // Consistent image error/empty placeholder with info icon
@@ -92,15 +100,56 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: AppColors.grey.withOpacity(0.08),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFF1F5F9),
+            const Color(0xFFE2E8F0),
+          ],
+        ),
+      ),
       child: Center(
         child: Icon(
-          Icons.info_outline_rounded,
-          color: AppColors.grey,
+          Icons.image_not_supported_rounded,
+          color: const Color(0xFF64748B),
           size: ResponsiveHelper.getIconSize(context, 36),
         ),
       ),
     );
+  }
+
+  Future<void> _loadCartItemCount() async {
+    try {
+      // Get user ID from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
+
+      if (userId == null) {
+        setState(() {
+          _cartItemCount = 0;
+        });
+        return;
+      }
+
+      // Call API to get cart data
+      final result = await _cartService.getCartByCustomerId(userId, 0);
+
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _cartItemCount = result.data!.data.items.length;
+        });
+      } else {
+        setState(() {
+          _cartItemCount = 0;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _cartItemCount = 0;
+      });
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -243,10 +292,10 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       final result = await _productService.searchProducts(searchRequest);
       
       if (result.isSuccess && result.data != null) {
-        setState(() {
+      setState(() {
           _products = result.data!.data.items;
-          _filteredProducts = List.from(_products);
-        });
+        _filteredProducts = List.from(_products);
+      });
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -489,6 +538,13 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload cart count when page becomes active again
+    _loadCartItemCount();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
@@ -499,10 +555,23 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFFFFFFF),
+                const Color(0xFFF8FAFC),
+                
+              ],
+            ),
+          ),
+        ),
         leading: Container(
           margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
           decoration: BoxDecoration(
@@ -510,24 +579,73 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF64748B).withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: AppColors.primary, size: 20),
+            icon: Icon(Icons.arrow_back_ios_rounded, color: const Color(0xFF475569), size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        title: Text(
-          'Mua sắm',
-          style: ResponsiveHelper.responsiveTextStyle(
+        title: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFF8FAFC),
+                const Color(0xFFF1F5F9),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF3B82F6).withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: TextField(
+            controller: _searchController,
+            textAlign: TextAlign.left,
+            decoration: InputDecoration(
+              hintText: 'Tìm kiếm sản phẩm...',
+              hintStyle: ResponsiveHelper.responsiveTextStyle(
             context: context,
-            baseSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.text,
+                baseSize: 14,
+                color: const Color(0xFF64748B),
+                
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: const Color(0xFF3B82F6),
+                size: 18,
+              ),
+              border: InputBorder.none,
+              // contentPadding: EdgeInsets.symmetric(
+              //   horizontal: ResponsiveHelper.getSpacing(context),
+              //   vertical: ResponsiveHelper.getSpacing(context) / 2,
+              // ),
+            ),
+            onChanged: (value) {
+              // Search with keyword
+              if (value.trim().isNotEmpty) {
+                _searchProductsByCategory(keyword: value.trim());
+              } else {
+                // If search is empty, reload by current category
+                if (_selectedCategory == 'Tất cả') {
+                  _searchProductsByCategory();
+                } else {
+                  final selectedCategoryData = _rootCategories.firstWhere(
+                    (cat) => cat.label == _selectedCategory,
+                    orElse: () => _rootCategories.first,
+                  );
+                  _searchProductsByCategory(categoryId: selectedCategoryData.id);
+                }
+              }
+            },
           ),
         ),
         actions: [
@@ -535,18 +653,21 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
             margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 10,
+                  color: const Color(0xFF3B82F6).withOpacity(0.4),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 IconButton(
                   key: _cartIconKey,
@@ -559,9 +680,55 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-                    );
+                    ).then((_) {
+                      // Reload cart count when returning from cart page
+                      _loadCartItemCount();
+                    });
                   },
                 ),
+                // Cart item count badge - floating outside
+                if (_cartItemCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.error.withOpacity(0.5),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Text(
+                        _cartItemCount > 99 ? '99+' : '$_cartItemCount',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -569,115 +736,285 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       ),
       body: Column(
         children: [
-          _buildModernSearchSection(),
-          _buildCategoryHeaderSection(),
+          // Horizontal scrollable category tabs
+          _buildHorizontalCategoryTabs(),
           Expanded(child: _buildModernProductGrid()),
         ],
       ),
     );
   }
 
-  Widget _buildModernSearchSection() {
+  // New: Horizontal scrollable category tabs
+  Widget _buildHorizontalCategoryTabs() {
+    if (_isLoadingCategories) {
     return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: ResponsiveHelper.getLargeSpacing(context),
-        vertical: ResponsiveHelper.getSpacing(context),
-      ),
-      padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Tìm kiếm sản phẩm...',
-                  hintStyle: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 14,
-                    color: AppColors.grey,
-                  ),
-                  prefixIcon: Container(
-                    margin: EdgeInsets.only(right: ResponsiveHelper.getSpacing(context) / 2),
-                    child: Icon(
-                      Icons.search_rounded,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getSpacing(context),
-                    vertical: ResponsiveHelper.getSpacing(context) / 2,
-                  ),
-                ),
-                onChanged: (value) {
-                  // Search with keyword
-                  if (value.trim().isNotEmpty) {
-                    _searchProductsByCategory(keyword: value.trim());
-                  } else {
-                    // If search is empty, reload by current category
-                    if (_selectedCategory == 'Tất cả') {
-                      _searchProductsByCategory();
-                    } else {
-                      final selectedCategoryData = _rootCategories.firstWhere(
-                        (cat) => cat.label == _selectedCategory,
-                        orElse: () => _rootCategories.first,
-                      );
-                      _searchProductsByCategory(categoryId: selectedCategoryData.id);
-                    }
-                  }
-                },
-              ),
+        height: 60,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: const Color(0xFF3B82F6),
             ),
           ),
-          SizedBox(width: ResponsiveHelper.getSpacing(context)),
+        ),
+      );
+    }
+
+    if (_rootCategories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Add "Tất cả" as first item
+    final allCategories = [
+      RootCategory(
+        id: 'all',
+        code: '',
+        description: '',
+        label: 'Tất cả',
+        type: 0,
+        childrenId: null,
+      ),
+      ..._rootCategories,
+    ];
+
+    return Container(
+      height: 80,
+      margin: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context)),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
+        itemCount: allCategories.length,
+        separatorBuilder: (context, index) => SizedBox(width: ResponsiveHelper.getSpacing(context)),
+        itemBuilder: (context, index) {
+          final category = allCategories[index];
+          final isSelected = (category.id == 'all' && _selectedCategory == 'Tất cả') ||
+                           (category.id != 'all' && _selectedCategory == category.label);
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                if (category.id == 'all') {
+                  _selectedCategory = 'Tất cả';
+                  _categoryPath.clear();
+                  _currentSubCategories.clear();
+                      _searchProductsByCategory();
+                    } else {
+                  _navigateToCategory(category);
+                }
+              });
+            },
+            child: AnimatedContainer(
+              width: 100,
+              duration: const Duration(milliseconds: 200),
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getSpacing(context)/2,
+                vertical: ResponsiveHelper.getSpacing(context) / 2,
+              ),
+              decoration: BoxDecoration(
+                border: isSelected ? Border(
+                  bottom: BorderSide(
+                    color: const Color(0xFF3B82F6),
+                    width: 3,
+                  ),
+                ) : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon container with gradient
           Container(
+                    width: ResponsiveHelper.getIconSize(context, 40),
+                    height: ResponsiveHelper.getIconSize(context, 40),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.8)],
-              ),
-              borderRadius: BorderRadius.circular(10),
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.white, 
+                        
+                        const Color(0xFF12c2e9),
+                        const Color(0xFFc471ed),
+                        const Color(0xFFf64f59),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected ? Border.all(
+                        color: const Color(0xFF3B82F6),
+                        width: 2,
+                      ) : Border.all(
+                        color: const Color(0xFFE2E8F0),
+                        width: 1,
+                      ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.secondary.withOpacity(0.3),
+                          color: isSelected 
+                              ? const Color(0xFF3B82F6).withOpacity(0.2)
+                              : const Color(0xFF64748B).withOpacity(0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: IconButton(
-              icon: Icon(
-                Icons.tune_rounded,
-                color: Colors.white,
-                size: 18,
+                    child: Image.asset('assets/box.png'),
+                  ),
+                  SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                  // Category name
+                  Text(
+                    category.label,
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF475569),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              onPressed: () {
-                _showModernFilterDialog();
-              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Old: Root category grid (now replaced by horizontal tabs)
+  Widget _buildRootCategoryGridSection() {
+    if (_isLoadingCategories) {
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 0,
+          // vertical: ResponsiveHelper.getSpacing(context),
+      ),
+      child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+            SizedBox(
+              width: ResponsiveHelper.getIconSize(context, 20),
+              height: ResponsiveHelper.getIconSize(context, 20),
+              child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            ),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              'Đang tải danh mục...',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 14,
+                color: AppColors.grey,
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
+    if (_rootCategories.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Show only the first 10 categories → 2 rows x 5 columns
+    final categories = _rootCategories.take(10).toList();
+    final crossAxisCount = 5; // 5 columns like the mock (10 items → 2 rows)
+
+    return Container(
+      height: 230,
+      // margin: EdgeInsets.symmetric(
+      //   horizontal: ResponsiveHelper.getLargeSpacing(context),
+      //   vertical: ResponsiveHelper.getSpacing(context),
+      // ),
+      padding: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context)),
+              decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF12c2e9),
+            const Color(0xFFc471ed),
+            const Color(0xFFf64f59),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF64748B).withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: const Color(0xFF64748B).withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+                border: Border.all(
+          color: const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: categories.length,
+        padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: ResponsiveHelper.getSpacing(context) * 0.5,
+          mainAxisSpacing: ResponsiveHelper.getSpacing(context),
+          // Slightly wider than tall so 2 rows fit nicely
+          childAspectRatio: 0.65,
+        ),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return _buildRootCategoryItem(category);
+        },
+      ),
+    );
+  }
+
+  Widget _buildRootCategoryItem(RootCategory category) {
+    return GestureDetector(
+      onTap: () {
+        _navigateToCategory(category);
+      },
+      child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+          Container(
+            width: ResponsiveHelper.getIconSize(context, 48),
+            height: ResponsiveHelper.getIconSize(context, 48),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white),
+              // gradient: LinearGradient(
+              //   begin: Alignment.topLeft,
+              //   end: Alignment.bottomRight,
+              //   colors: [Colors.white],
+              // ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white,
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Image.asset('assets/box.png')
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context) * 0.5),
+                  Text(
+            category.label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 13,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],
@@ -685,93 +1022,86 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
-  Widget _buildCategoryHeaderSection() {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: ResponsiveHelper.getLargeSpacing(context),
-        vertical: ResponsiveHelper.getSpacing(context) * 0.5,
-      ),
-      child: Row(
-        children: [
-          // Category selector button
-          GestureDetector(
-            onTap: _showCategoryPopup,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.tune_rounded,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Danh mục',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          SizedBox(width: 12),
-          
-          // Breadcrumb navigation (if has path)
-          if (_categoryPath.isNotEmpty)
-            Expanded(child: _buildClickableBreadcrumb()),
-        ],
-      ),
-    );
+  // Map category labels → Icon + gradient colors
+  _CategoryIconSpec _getCategoryIconSpec(String label) {
+    final l = label.toLowerCase();
+    // Sữa bột - Pink gradient
+    if (l.contains('sữa') && l.contains('bột')) {
+      return _CategoryIconSpec(Icons.bakery_dining_rounded, const [Color(0xFFFF6B9D), Color(0xFFFF8FAB)]);
+    }
+    // Bỉm tã - Blue gradient
+    if (l.contains('bỉm') || l.contains('tã')) {
+      return _CategoryIconSpec(Icons.baby_changing_station, const [Color(0xFF4F9CF9), Color(0xFF6BB6FF)]);
+    }
+    // Sữa tươi - Cyan gradient
+    if (l.contains('sữa tươi') || (l.contains('sữa') && l.contains('tươi'))) {
+      return _CategoryIconSpec(Icons.local_drink_rounded, const [Color(0xFF06B6D4), Color(0xFF22D3EE)]);
+    }
+    // Dinh dưỡng - Orange gradient
+    if (l.contains('dinh dưỡng')) {
+      return _CategoryIconSpec(Icons.health_and_safety_rounded, const [Color(0xFFF97316), Color(0xFFFB923C)]);
+    }
+    // Sức khỏe - Red gradient
+    if (l.contains('sức khỏe')) {
+      return _CategoryIconSpec(Icons.favorite_rounded, const [Color(0xFFEF4444), Color(0xFFF87171)]);
+    }
+    // Hóa mỹ phẩm - Teal gradient
+    if (l.contains('hóa mỹ phẩm') || l.contains('hoá mỹ phẩm') || l.contains('mỹ phẩm')) {
+      return _CategoryIconSpec(Icons.cleaning_services_rounded, const [Color(0xFF14B8A6), Color(0xFF2DD4BF)]);
+    }
+    // Đồ dùng - Yellow gradient
+    if (l.contains('đồ dùng')) {
+      return _CategoryIconSpec(Icons.shopping_basket_rounded, const [Color(0xFFF59E0B), Color(0xFFFBBF24)]);
+    }
+    // Ghế ngồi ô tô - Indigo gradient
+    if (l.contains('ghế ngồi') || l.contains('ô tô')) {
+      return _CategoryIconSpec(Icons.event_seat_rounded, const [Color(0xFF6366F1), Color(0xFF8B5CF6)]);
+    }
+    // Thời trang - Purple gradient
+    if (l.contains('thời trang')) {
+      return _CategoryIconSpec(Icons.checkroom_rounded, const [Color(0xFFA855F7), Color(0xFFC084FC)]);
+    }
+    // Đồ chơi - Green gradient
+    if (l.contains('đồ chơi')) {
+      return _CategoryIconSpec(Icons.toys_rounded, const [Color(0xFF10B981), Color(0xFF34D399)]);
+    }
+    // Default fallback - Slate gradient
+    return _CategoryIconSpec(Icons.category_rounded, const [Color(0xFF64748B), Color(0xFF94A3B8)]);
   }
+
+  
+
+  // Search section moved to AppBar
+
+  // Old header UI has been replaced by _buildRootCategoryGridSection()
 
   Widget _buildModernProductGrid() {
     if (_isLoadingProducts) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+        children: [
             SizedBox(
               width: ResponsiveHelper.getIconSize(context, 40),
               height: ResponsiveHelper.getIconSize(context, 40),
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                color: AppColors.primary,
-              ),
+                    color: AppColors.primary,
+                  ),
             ),
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            Text(
+                  Text(
               'Đang tải sản phẩm...',
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
                 baseSize: 16,
                 color: AppColors.grey,
               ),
             ),
-          ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
 
     if (_filteredProducts.isEmpty) {
       return Center(
@@ -842,17 +1172,29 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
   Widget _buildModernProductCard(SearchProductItem product, GlobalKey buttonKey) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            const Color(0xFFFBFCFD),
+          ],
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF64748B).withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: const Color(0xFF64748B).withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
+          color: const Color(0xFFE2E8F0),
           width: 1,
         ),
       ),
@@ -876,7 +1218,14 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: AppColors.grey.withOpacity(0.1),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFF1F5F9),
+                          const Color(0xFFE2E8F0),
+                        ],
+                      ),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -897,20 +1246,29 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                             width: double.infinity,
                             height: double.infinity,
                             placeholder: (context, url) => Container(
-                              color: AppColors.grey.withOpacity(0.1),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    const Color(0xFFF1F5F9),
+                                    const Color(0xFFE2E8F0),
+                                  ],
+                                ),
+                              ),
                               child: Center(
                                 child: SizedBox(
                                   width: ResponsiveHelper.getIconSize(context, 32),
                                   height: ResponsiveHelper.getIconSize(context, 32),
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: AppColors.primary,
+                                    color: const Color(0xFF3B82F6),
                                   ),
-                                ),
                               ),
                             ),
-                            errorWidget: (context, url, error) => _buildImageErrorPlaceholder(context),
                           ),
+                            errorWidget: (context, url, error) => _buildImageErrorPlaceholder(context),
+                        ),
                         )
                       else
                         _buildImageErrorPlaceholder(context),
@@ -922,20 +1280,27 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                         child: Container(
                           padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context) / 2),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                const Color(0xFFFAFBFC),
+                              ],
+                            ),
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
+                                color: const Color(0xFF64748B).withOpacity(0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
                           child: Icon(
                             Icons.favorite_border_rounded,
                             size: ResponsiveHelper.getIconSize(context, 16),
-                            color: AppColors.grey,
+                            color: const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -956,7 +1321,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                         context: context,
                         baseSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.text,
+                        color: const Color(0xFF1E293B),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -965,12 +1330,12 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                     
                     // Brand
                     if (product.brand.isNotEmpty)
-                      Text(
+                        Text(
                         product.brand,
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 12,
-                          color: AppColors.grey,
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 12,
+                          color: const Color(0xFF64748B),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -985,13 +1350,13 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
+                                Text(
                                 CurrencyUtils.formatVND(product.price),
                                 style: ResponsiveHelper.responsiveTextStyle(
                                   context: context,
                                   baseSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                                  color: const Color(0xFF059669),
                                 ),
                               ),
                             ],
@@ -1116,6 +1481,9 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       _overlayEntry = null;
       _animationController.reset();
       
+      // Reload cart count after successful add
+      _loadCartItemCount();
+      
       // Show success message after animation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1161,7 +1529,10 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-              );
+              ).then((_) {
+                // Reload cart count when returning from cart page
+                _loadCartItemCount();
+              });
             },
           ),
         ),
@@ -1345,6 +1716,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     }
   }
 
+  // Legacy breadcrumb (unused)
   Widget _buildClickableBreadcrumb() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1438,6 +1810,7 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
     );
   }
 
+  // Legacy category popup (unused)
   void _showCategoryPopup() {
     showModalBottomSheet(
       context: context,
@@ -2337,5 +2710,13 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
       ],
     );
   }
+
+}
+
+// Helper class for root category icons
+class _CategoryIconSpec {
+  final IconData icon;
+  final List<Color> gradient;
+  const _CategoryIconSpec(this.icon, this.gradient);
 }
  

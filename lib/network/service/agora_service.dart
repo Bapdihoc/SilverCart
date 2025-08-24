@@ -64,7 +64,7 @@ class AgoraService {
   // Join channel
   Future<bool> joinChannel({
     required String channelName,
-    String? token,
+    required String token,
     int uid = 0,
   }) async {
     if (!_isEngineInitialized || _engine == null) {
@@ -74,8 +74,8 @@ class AgoraService {
     
     try {
       await _engine!.joinChannel(
-        token: '006d37efc8cf7624babaf1a8c9f79e5ed04IABBFpK8zkdxIS8A2ru9yZoTLgeh4W7+g689+0Klye3dm1w+93IAAAAAIgBi4REkVnefaAQAAQBWd59oAgBWd59oAwBWd59oBABWd59o',
-        channelId: 'call_i3050',
+        token: token,
+        channelId: channelName,
         uid: uid,
         options: const ChannelMediaOptions(
           clientRoleType: ClientRoleType.clientRoleBroadcaster,

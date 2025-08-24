@@ -4,6 +4,12 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../shopping/product_catalog_page.dart';
 import '../budget/budget_overview_page.dart';
+import '../wallet/wallet_management_page.dart';
+import '../../network/service/wallet_service.dart';
+import '../../network/service/auth_service.dart';
+import '../../network/service/order_service.dart';
+import '../../injection.dart';
+import '../../core/utils/currency_utils.dart';
 
 class GuardianDashboardPage extends StatefulWidget {
   const GuardianDashboardPage({super.key});
@@ -16,13 +22,88 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   late final PageController _bannerController;
   int _currentBannerIndex = 0;
   Timer? _autoScrollTimer;
+  
+  // Wallet data
+  late final WalletService _walletService;
+  late final AuthService _authService;
+  late final OrderService _orderService;
+  double _currentBalance = 0;
+  bool _isLoadingBalance = true;
+  
+  // Order statistics
+  int _totalOrders = 0;
+  int _pendingOrders = 0;
+  int _completedOrders = 0;
+  bool _isLoadingStats = true;
 
   @override
   void initState() {
     super.initState();
+    _walletService = getIt<WalletService>();
+    _authService = getIt<AuthService>();
+    _orderService = getIt<OrderService>();
+    
     const int initialPage = 1000; // allow virtually infinite backward/forward scrolling
     _bannerController = PageController(viewportFraction: 0.85, initialPage: initialPage);
     _startAutoScroll();
+    _loadWalletBalance();
+    _loadOrderStatistics();
+  }
+
+  Future<void> _loadWalletBalance() async {
+    try {
+      final userId = await _authService.getUserId();
+      if (userId != null) {
+        final result = await _walletService.getWalletAmount(userId);
+        if (result.isSuccess && result.data != null) {
+          setState(() {
+            _currentBalance = result.data!.data.amount;
+            _isLoadingBalance = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingBalance = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoadingBalance = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingBalance = false;
+      });
+    }
+  }
+
+  Future<void> _loadOrderStatistics() async {
+    try {
+      final userId = await _authService.getUserId();
+      if (userId != null) {
+        final result = await _orderService.getUserStatistic(userId);
+        if (result.isSuccess && result.data != null) {
+          setState(() {
+            _totalOrders = result.data!.data.totalCount;
+            _pendingOrders = result.data!.data.totalOrderToPending;
+            _completedOrders = result.data!.data.totalOrderComplete;
+            _isLoadingStats = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingStats = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
   }
 
   void _startAutoScroll() {
@@ -208,24 +289,123 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Xin chào! 👋',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Xin chào! 👋',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                    Text(
+                      'Chào mừng bạn trở lại',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 14,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Wallet section - clickable
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WalletManagementPage(),
+                      ),
+                    );
+                    
+                    // Refresh balance when returning from wallet page
+                    if (result == true || result == null) {
+                      _loadWalletBalance();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ResponsiveHelper.getLargeSpacing(context),
+                      vertical: ResponsiveHelper.getSpacing(context),
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: Colors.white,
+                          size: ResponsiveHelper.getIconSize(context, 20),
+                        ),
+                        SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                                                    Text(
+                          'Số dư ví',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 10,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (_isLoadingBalance)
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        else
+                          Text(
+                            CurrencyUtils.formatVND(_currentBalance),
+                            style: ResponsiveHelper.responsiveTextStyle(
+                              context: context,
+                              baseSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-          Text(
-            'Chào mừng bạn trở lại',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 14,
-              color: AppColors.grey,
-            ),
-          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          
+          
         ],
       ),
     );
@@ -272,7 +452,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 child: _buildModernStatCard(
                   icon: Icons.shopping_cart_rounded,
                   title: 'Đơn hàng',
-                  value: '12',
+                  value: _isLoadingStats ? '...' : '$_totalOrders',
                   color: AppColors.secondary,
                   gradient: [AppColors.secondary, AppColors.secondary.withOpacity(0.7)],
                 ),
@@ -281,8 +461,8 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               Expanded(
                 child: _buildModernStatCard(
                   icon: Icons.pending_actions_rounded,
-                  title: 'Đang xử lý',
-                  value: '2',
+                  title: 'Đang\nxử lý',
+                  value: _isLoadingStats ? '...' : '$_pendingOrders',
                   color: AppColors.warning,
                   gradient: [AppColors.warning, AppColors.warning.withOpacity(0.7)],
                 ),
@@ -292,7 +472,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 child: _buildModernStatCard(
                   icon: Icons.check_circle_rounded,
                   title: 'Hoàn thành',
-                  value: '10',
+                  value: _isLoadingStats ? '...' : '$_completedOrders',
                   color: AppColors.success,
                   gradient: [AppColors.success, AppColors.success.withOpacity(0.7)],
                 ),

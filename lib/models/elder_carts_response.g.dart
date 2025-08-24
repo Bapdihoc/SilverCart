@@ -9,16 +9,14 @@ part of 'elder_carts_response.dart';
 ElderCartsResponse _$ElderCartsResponseFromJson(Map<String, dynamic> json) =>
     ElderCartsResponse(
       message: json['message'] as String,
-      data: (json['data'] as List<dynamic>)
-          .map((e) => ElderCartData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      data:
+          (json['data'] as List<dynamic>)
+              .map((e) => ElderCartData.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$ElderCartsResponseToJson(ElderCartsResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 ElderCartData _$ElderCartDataFromJson(Map<String, dynamic> json) =>
     ElderCartData(
@@ -28,9 +26,10 @@ ElderCartData _$ElderCartDataFromJson(Map<String, dynamic> json) =>
       elderId: json['elderId'] as String,
       elderName: json['elderName'] as String,
       status: json['status'] as String,
-      items: (json['items'] as List<dynamic>)
-          .map((e) => ElderCartItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      items:
+          (json['items'] as List<dynamic>)
+              .map((e) => ElderCartItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$ElderCartDataToJson(ElderCartData instance) =>

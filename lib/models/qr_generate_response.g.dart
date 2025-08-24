@@ -13,17 +13,10 @@ QrGenerateResponse _$QrGenerateResponseFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$QrGenerateResponseToJson(QrGenerateResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 QrGenerateData _$QrGenerateDataFromJson(Map<String, dynamic> json) =>
-    QrGenerateData(
-      token: json['token'] as String,
-    );
+    QrGenerateData(token: json['token'] as String);
 
 Map<String, dynamic> _$QrGenerateDataToJson(QrGenerateData instance) =>
-    <String, dynamic>{
-      'token': instance.token,
-    };
+    <String, dynamic>{'token': instance.token};

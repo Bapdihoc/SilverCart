@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,9 +62,22 @@ class _MyAppState extends State<MyApp> {
     _appLinks = AppLinks();
     _handleInitialUri();
     _sub = _appLinks!.uriLinkStream.listen((uri) {
-      if (uri.path == '/payment/callback') {
-        log('uri: $uri');
-        AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+      log('uri2: $uri');
+      // Handle custom scheme: silvercart://payment/callback?status=...
+      if (uri.scheme == 'silvercart') {
+        final combinedPath = '/${uri.host}${uri.path}'; // e.g. host=payment, path=/callback → /payment/callback
+        if (combinedPath == '/payment/callback') {
+          _handleDeepLinkOnce(uri, () {
+            AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+          });
+          return;
+        }
+      }
+      // Fallback for http(s) deep links where path contains payment/callback
+      if (uri.path.contains('/payment/callback')) {
+        _handleDeepLinkOnce(uri, () {
+          AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+        });
       }
     }, onError: (err) {});
   }
@@ -71,10 +85,41 @@ class _MyAppState extends State<MyApp> {
   Future<void> _handleInitialUri() async {
     try {
       final uri = await _appLinks?.getInitialAppLink();
-      if (uri != null && uri.path == '/payment/callback') {
-        AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+      if (uri != null) {
+        log('initial uri: $uri');
+        if (uri.scheme == 'silvercart') {
+          final combinedPath = '/${uri.host}${uri.path}';
+          log('combinedPath: $combinedPath');
+          if (combinedPath == '/payment/callback') {
+            _handleDeepLinkOnce(uri, () {
+              AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+            });
+            return;
+          }
+        }
+        if (uri.path.contains('/payment/callback')) {
+          _handleDeepLinkOnce(uri, () {
+            AppRouter.router.go('/payment/callback?status=${uri.queryParameters['status'] ?? 'success'}');
+          });
+        }
       }
     } catch (_) {}
+  }
+
+  Future<void> _handleDeepLinkOnce(Uri uri, VoidCallback onFirstHandle) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastLink = prefs.getString('last_handled_deep_link');
+      final current = uri.toString();
+      if (lastLink == current) {
+        log('Deep link already handled, skipping: $current');
+        return;
+      }
+      await prefs.setString('last_handled_deep_link', current);
+      onFirstHandle();
+    } catch (e) {
+      onFirstHandle();
+    }
   }
 
   @override

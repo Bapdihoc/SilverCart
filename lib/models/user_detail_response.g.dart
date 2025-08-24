@@ -13,10 +13,7 @@ UserDetailResponse _$UserDetailResponseFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$UserDetailResponseToJson(UserDetailResponse instance) =>
-    <String, dynamic>{
-      'message': instance.message,
-      'data': instance.data,
-    };
+    <String, dynamic>{'message': instance.message, 'data': instance.data};
 
 UserDetailData _$UserDetailDataFromJson(Map<String, dynamic> json) =>
     UserDetailData(
@@ -25,7 +22,7 @@ UserDetailData _$UserDetailDataFromJson(Map<String, dynamic> json) =>
       userName: json['userName'] as String,
       email: json['email'] as String?,
       avatar: json['avatar'] as String?,
-      gender: (json['gender'] as num).toInt(),
+      gender: (json['gender'] as num?)?.toInt() ?? 0,
       phoneNumber: json['phoneNumber'] as String?,
       birthDate: DateTime.parse(json['birthDate'] as String),
       age: (json['age'] as num).toInt(),
@@ -35,12 +32,14 @@ UserDetailData _$UserDetailDataFromJson(Map<String, dynamic> json) =>
       guardianId: json['guardianId'] as String,
       roleId: json['roleId'] as String,
       roleName: json['roleName'] as String,
-      addresses: (json['addresses'] as List<dynamic>)
-          .map((e) => UserDetailAddress.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      categoryValues: (json['categoryValues'] as List<dynamic>)
-          .map((e) => UserCategoryValue.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      addresses:
+          (json['addresses'] as List<dynamic>)
+              .map((e) => UserDetailAddress.fromJson(e as Map<String, dynamic>))
+              .toList(),
+      categoryValues:
+          (json['categoryValues'] as List<dynamic>)
+              .map((e) => UserCategoryValue.fromJson(e as Map<String, dynamic>))
+              .toList(),
       emergencyPhoneNumber: json['emergencyPhoneNumber'] as String?,
     );
 

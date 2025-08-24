@@ -141,25 +141,25 @@ class ProductService {
   // Map SearchProductItem from search API to UI format
   Map<String, dynamic> mapSearchProductToUI(SearchProductItem product) {
     // Get category emoji
-    final categoryEmoji = _getSearchCategoryEmoji(product.categories);
+    // final categoryEmoji = _getSearchCategoryEmoji(product.categories);
 
     return {
       'id': product.id,
       'name': product.name,
-      'emoji': categoryEmoji,
+      'emoji': product.imageUrl,
       'price': product.price.toInt(),
       'originalPrice': null, // No original price in search API
       'discount': null, // No discount in search API
       'rating': 4.5, // TODO: Add rating from API when available
       'reviews': 0, // TODO: Add reviews from API when available
-      'category': categoryEmoji + ' ' + (product.categories.isNotEmpty 
+      'category': (product.categories.isNotEmpty 
           ? product.categories.first.label 
           : 'Khác'),
       'subCategory': product.categories.length > 1 ? product.categories[1].label : '',
       'description': product.description,
       'brand': product.brand,
       'imageUrl': product.imageUrl,
-      'image': categoryEmoji, // Use emoji for now
+      'image': product.imageUrl, // Use emoji for now
     };
   }
 
