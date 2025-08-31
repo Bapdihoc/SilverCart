@@ -297,117 +297,47 @@ class _VideoCallPageState extends State<VideoCallPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.video_call,
-              size: ResponsiveHelper.getIconSize(context, 80),
-              color: AppColors.primary,
-            ),
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            Text(
-              '📞 Tư vấn sản phẩm trực tiếp',
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
-                baseSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.text,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: ResponsiveHelper.getSpacing(context)),
-            Text(
-              'Sản phẩm: ${widget.productName}',
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
-                baseSize: 16,
-                color: AppColors.grey,
-              ),
-              textAlign: TextAlign.center,
+            Image.asset(
+              'assets/call_service.png',
+              width: ResponsiveHelper.getIconSize(context, 200),
+              height: ResponsiveHelper.getIconSize(context, 200),
             ),
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
 
-            // Channel ID Input
-            Container(
-              padding: EdgeInsets.all(
-                ResponsiveHelper.getLargeSpacing(context),
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(
-                  ResponsiveHelper.getBorderRadius(context) * 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Text intro use Richtext for multi color
+            RichText(
+              text: TextSpan(
                 children: [
-                  Text(
-                    'Channel ID để kết nối:',
+                  TextSpan(
+                    text: 'Chào mừng bạn đến với ',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'SilverCart',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      color: AppColors.primary,
+                      context: context,
+                      baseSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '\nHãy bắt đầu cuộc gọi và trải nghiệm dịch vụ tư vấn của SilverCart tốt nhất',
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.text,
                     ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  TextField(
-                    controller: _channelController,
-                    decoration: InputDecoration(
-                      hintText: 'Nhập Channel ID từ chuyên viên tư vấn',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          ResponsiveHelper.getBorderRadius(context),
-                        ),
-                        borderSide: BorderSide(
-                          color: AppColors.grey.withOpacity(0.3),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          ResponsiveHelper.getBorderRadius(context),
-                        ),
-                        borderSide: BorderSide(color: AppColors.primary),
-                      ),
-                      prefixIcon: Icon(Icons.link, color: AppColors.primary),
-                    ),
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  Row(
-                    children: [
-                      Icon(Icons.copy, size: 16, color: AppColors.grey),
-                      SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () {
-                          Clipboard.setData(
-                            ClipboardData(text: _channelController.text),
-                          );
-                          _showSuccessSnackBar('Đã copy Channel ID');
-                        },
-                        child: Text(
-                          'Copy để chia sẻ với chuyên viên',
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 12,
-                            color: AppColors.grey,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
+            
 
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context) * 2),
 
@@ -478,46 +408,46 @@ class _VideoCallPageState extends State<VideoCallPage> {
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
 
             // Instructions
-            Container(
-              padding: EdgeInsets.all(
-                ResponsiveHelper.getLargeSpacing(context),
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(
-                  ResponsiveHelper.getBorderRadius(context),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppColors.primary,
-                    size: ResponsiveHelper.getIconSize(context, 24),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  Text(
-                    'Hướng dẫn sử dụng:',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                  Text(
-                    '1. Nhập Channel ID được cung cấp bởi chuyên viên\n2. Nhấn "Bắt đầu tư vấn"\n3. Chờ chuyên viên tham gia cuộc gọi\n4. Bắt đầu nhận tư vấn trực tiếp',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 12,
-                      color: AppColors.primary,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   padding: EdgeInsets.all(
+            //     ResponsiveHelper.getLargeSpacing(context),
+            //   ),
+            //   decoration: BoxDecoration(
+            //     color: AppColors.primary.withOpacity(0.1),
+            //     borderRadius: BorderRadius.circular(
+            //       ResponsiveHelper.getBorderRadius(context),
+            //     ),
+            //   ),
+            //   child: Column(
+            //     children: [
+            //       Icon(
+            //         Icons.info_outline,
+            //         color: AppColors.primary,
+            //         size: ResponsiveHelper.getIconSize(context, 24),
+            //       ),
+            //       SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            //       Text(
+            //         'Hướng dẫn sử dụng:',
+            //         style: ResponsiveHelper.responsiveTextStyle(
+            //           context: context,
+            //           baseSize: 14,
+            //           fontWeight: FontWeight.w600,
+            //           color: AppColors.primary,
+            //         ),
+            //       ),
+            //       SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+            //       Text(
+            //         '1. Nhập Channel ID được cung cấp bởi chuyên viên\n2. Nhấn "Bắt đầu tư vấn"\n3. Chờ chuyên viên tham gia cuộc gọi\n4. Bắt đầu nhận tư vấn trực tiếp',
+            //         style: ResponsiveHelper.responsiveTextStyle(
+            //           context: context,
+            //           baseSize: 12,
+            //           color: AppColors.primary,
+            //         ),
+            //         textAlign: TextAlign.left,
+            //       ),
+            //     ],
+            //   ),
+            // ),
           ],
         ),
       ),

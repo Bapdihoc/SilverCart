@@ -7,6 +7,7 @@ import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
 import 'package:silvercart/models/order_statistic_response.dart';
+import 'package:silvercart/models/elder_order_response.dart';
 part 'order_api_service.g.dart';
 
 class ParseErrorLogger {
@@ -49,5 +50,8 @@ abstract class OrderApiService {
   
   @GET('/api/Order/GetUserStatistic/{userId}')
   Future<OrderStatisticResponse> getUserStatistic(@Path('userId') String userId);
+  
+  @GET('/api/Order/GetOrdersByElder')
+  Future<ElderOrderResponse> getOrdersByElder();
   
 }

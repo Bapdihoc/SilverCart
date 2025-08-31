@@ -7,6 +7,8 @@ import '../../models/user_detail_response.dart';
 import '../../network/service/auth_service.dart';
 import '../../injection.dart';
 import 'category_preferences_page.dart';
+import 'edit_elderly_info_page.dart';
+import 'edit_elderly_address_page.dart';
 
 class ElderlyProfileDetailPage extends StatefulWidget {
   final Elderly elderly;
@@ -74,6 +76,19 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
 
   String _formatAddress(UserDetailAddress address) {
     return '${address.streetAddress}, ${address.wardName}, ${address.districtName}, ${address.provinceName}';
+  }
+
+  String _buildDisplayDescription(String description) {
+    // Format the combined description for better display
+    if (description.isEmpty) return '';
+    
+    // Replace the prefixes with more user-friendly format
+    String formatted = description
+        .replaceAll('Ghi chú y tế:', '• Y tế:')
+        .replaceAll('Hạn chế chế độ ăn:', '• Chế độ ăn:')
+        .replaceAll('\n\n', '\n');
+    
+    return formatted;
   }
 
   Widget _buildLoadingState() {
@@ -312,40 +327,6 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
         ),
       ),
       centerTitle: true,
-              actions: [
-          Container(
-            margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(
-                ResponsiveHelper.getBorderRadius(context),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.edit,
-                color: AppColors.primary,
-                size: ResponsiveHelper.getIconSize(context, 20),
-              ),
-              onPressed: () {
-                // TODO: Navigate to general edit page
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Chức năng chỉnh sửa đang phát triển'),
-                    backgroundColor: AppColors.secondary,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -591,26 +572,60 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
                 size: ResponsiveHelper.getIconSize(context, 20),
               ),
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Text(
-                'Thông tin cá nhân',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
+              Expanded(
+                child: Text(
+                  'Thông tin cá nhân',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(
+                    ResponsiveHelper.getBorderRadius(context),
+                  ),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.edit,
+                    color: AppColors.primary,
+                    size: ResponsiveHelper.getIconSize(context, 16),
+                  ),
+                  onPressed: () async {
+                    if (_userDetail != null) {
+                      // Navigate to edit personal info page
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => EditElderlyInfoPage(
+                            userDetail: _userDetail!,
+                          ),
+                        ),
+                      );
+                      
+                      // Reload data if info was updated
+                      if (result == true) {
+                        _loadUserDetail();
+                      }
+                    }
+                  },
                 ),
               ),
             ],
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          _buildInfoRow('Tên đăng nhập', _userDetail!.userName),
+          // _buildInfoRow('Tên đăng nhập', _userDetail!.userName),
           _buildInfoRow('Email', _userDetail!.email ?? 'Chưa cập nhật'),
           _buildInfoRow('Giới tính', _getGenderText(_userDetail!.gender)),
           _buildInfoRow('Số điện thoại', _userDetail!.phoneNumber ?? 'Chưa cập nhật'),
           _buildInfoRow('Ngày sinh', '${_userDetail!.birthDate.day}/${_userDetail!.birthDate.month}/${_userDetail!.birthDate.year}'),
-          _buildInfoRow('Số khẩn cấp', _userDetail!.emergencyPhoneNumber ?? 'Chưa cập nhật', isLast: true),
+          _buildInfoRow('Số khẩn cấp', _userDetail!.emergencyPhoneNumber ?? 'Chưa cập nhật',),
           if (_userDetail!.description.isNotEmpty)
-            _buildInfoRow('Ghi chú', _userDetail!.description, isLast: true),
+            _buildInfoRow('Ghi chú', _buildDisplayDescription(_userDetail!.description), isLast: true),
         ],
       ),
     );
@@ -648,13 +663,47 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
                 size: ResponsiveHelper.getIconSize(context, 20),
               ),
               SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Text(
-                'Địa chỉ',
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
+              Expanded(
+                child: Text(
+                  'Địa chỉ',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(
+                    ResponsiveHelper.getBorderRadius(context),
+                  ),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.edit,
+                    color: AppColors.primary,
+                    size: ResponsiveHelper.getIconSize(context, 16),
+                  ),
+                  onPressed: () async {
+                    if (_userDetail != null) {
+                      // Navigate to edit address page
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => EditElderlyAddressPage(
+                            userDetail: _userDetail!,
+                          ),
+                        ),
+                      );
+                      
+                      // Reload data if address was updated
+                      if (result == true) {
+                        _loadUserDetail();
+                      }
+                    }
+                  },
                 ),
               ),
             ],

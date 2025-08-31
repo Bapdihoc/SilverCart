@@ -1,6 +1,8 @@
 import 'package:injectable/injectable.dart';
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/elder_request.dart';
+import 'package:silvercart/models/update_elder_request.dart';
+import 'package:silvercart/models/update_elder_address_request.dart';
 import 'package:silvercart/models/elder_list_response.dart';
 import 'package:silvercart/network/repositories/elder/elder_repository.dart';
 
@@ -16,6 +18,34 @@ class ElderRepositoryMock implements ElderRepository {
       data: {
         'message': 'Tạo người thân thành công',
         'elderId': 'mock-elder-id-123',
+      },
+    );
+  }
+
+  @override
+  Future<BaseResponse> updateElder(UpdateElderRequest request) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(seconds: 2));
+    
+    // Mock successful response
+    return BaseResponse.success(
+      data: {
+        'message': 'Cập nhật thông tin thành công',
+        'data': null,
+      },
+    );
+  }
+
+  @override
+  Future<BaseResponse> updateElderAddress(String elderId, List<UpdateElderAddressRequest> addresses) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(seconds: 2));
+    
+    // Mock successful response
+    return BaseResponse.success(
+      data: {
+        'message': 'Cập nhật địa chỉ thành công',
+        'data': null,
       },
     );
   }

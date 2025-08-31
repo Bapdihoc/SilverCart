@@ -671,10 +671,10 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
               children: [
                 IconButton(
                   key: _cartIconKey,
-                  icon: Icon(
-                    Icons.shopping_cart_rounded,
-                    color: Colors.white,
-                    size: 20,
+                  icon: Image.asset(
+                    'assets/order.png',
+                    width: ResponsiveHelper.getIconSize(context, 35),
+                    height: ResponsiveHelper.getIconSize(context, 35),
                   ),
                   onPressed: () {
                     Navigator.push(
@@ -1272,38 +1272,6 @@ class _ProductGuardianPageState extends State<ProductGuardianPage>
                         )
                       else
                         _buildImageErrorPlaceholder(context),
-                      
-                      // Favorite button
-                      Positioned(
-                        top: ResponsiveHelper.getSpacing(context),
-                        left: ResponsiveHelper.getSpacing(context),
-                        child: Container(
-                          padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context) / 2),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white,
-                                const Color(0xFFFAFBFC),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF64748B).withOpacity(0.12),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.favorite_border_rounded,
-                            size: ResponsiveHelper.getIconSize(context, 16),
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),

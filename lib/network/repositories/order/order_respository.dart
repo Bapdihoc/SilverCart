@@ -4,6 +4,7 @@ import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
 import 'package:silvercart/models/order_statistic_response.dart';
+import 'package:silvercart/models/elder_order_response.dart';
 
 abstract class OrderRespository {
   Future<BaseResponse<void>> cancelOrder(String orderId, String cancelReason);
@@ -13,4 +14,5 @@ abstract class OrderRespository {
   Future<BaseResponse<CreateOrderResponse>> checkoutByWallet(CreateOrderRequest request);
   Future<BaseResponse<UserOrderResponse>> getUserOrders();
   Future<BaseResponse<OrderStatisticResponse>> getUserStatistic(String userId);
+  Future<BaseResponse<ElderOrderResponse>> getOrdersByElder();
 }

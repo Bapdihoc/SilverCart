@@ -4,6 +4,8 @@ import 'package:dio/dio.dart' show Response;
 import 'package:injectable/injectable.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:silvercart/models/elder_request.dart';
+import 'package:silvercart/models/update_elder_request.dart';
+import 'package:silvercart/models/update_elder_address_request.dart';
 import 'package:silvercart/models/elder_response.dart';
 import 'package:silvercart/models/elder_list_response.dart';
 
@@ -31,6 +33,15 @@ abstract class ElderApiService {
 
   @POST('/api/Elder/CreateElder')
   Future<ElderResponse> createElder(@Body() ElderRequest request);
+
+  @PUT('/api/Elder/UpdateElder')
+  Future<ElderResponse> updateElder(@Body() UpdateElderRequest request);
+
+  @PUT('/api/Elder/UpdateElderAdress')
+  Future<ElderResponse> updateElderAddress(
+    @Query('elderId') String elderId,
+    @Body() List<UpdateElderAddressRequest> addresses,
+  );
 
   @GET('/api/Elder/GetMyElders')
   Future<ElderListResponse> getMyElders();

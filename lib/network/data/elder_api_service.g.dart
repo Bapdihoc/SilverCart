@@ -46,6 +46,64 @@ class _ElderApiService implements ElderApiService {
   }
 
   @override
+  Future<ElderResponse> updateElder(UpdateElderRequest request) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(request.toJson());
+    final _options = _setStreamType<ElderResponse>(
+      Options(method: 'PUT', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/Elder/UpdateElder',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ElderResponse _value;
+    try {
+      _value = ElderResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<ElderResponse> updateElderAddress(
+    String elderId,
+    List<UpdateElderAddressRequest> addresses,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'elderId': elderId};
+    final _headers = <String, dynamic>{};
+    final _data = addresses.map((e) => e.toJson()).toList();
+    final _options = _setStreamType<ElderResponse>(
+      Options(method: 'PUT', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/Elder/UpdateElderAdress',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late ElderResponse _value;
+    try {
+      _value = ElderResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<ElderListResponse> getMyElders() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};

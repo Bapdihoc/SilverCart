@@ -1,5 +1,6 @@
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/creating_elder_request.dart';
+import 'package:silvercart/models/elder_order_response.dart';
 import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
@@ -135,5 +136,10 @@ class OrderRespositoryMock implements OrderRespository {
   @override
   Future<BaseResponse<void>> cancelOrder(String orderId, String reason) async {
     return BaseResponse.success(data: null);
+  }
+
+ @override
+  Future<BaseResponse<ElderOrderResponse>> getOrdersByElder() async {
+    throw UnimplementedError();
   }
 }

@@ -103,14 +103,24 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
         //     onPressed: () => Navigator.of(context).pop(),
         //   ),
         // ),
-        title: Text(
-          'Đơn hàng của tôi',
-          style: ResponsiveHelper.responsiveTextStyle(
-            context: context,
-            baseSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.text,
-          ),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/order_list.png',
+              width: ResponsiveHelper.getIconSize(context, 50),
+              height: ResponsiveHelper.getIconSize(context, 50),
+            ),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+            Text(
+              'Đơn hàng của tôi',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.text,
+              ),
+            ),
+          ],
         ),
         actions: [
           Container(

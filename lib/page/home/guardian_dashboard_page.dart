@@ -357,10 +357,10 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: Colors.white,
-                          size: ResponsiveHelper.getIconSize(context, 20),
+                        Image.asset(
+                          'assets/wallet.png',
+                          width: ResponsiveHelper.getIconSize(context, 40),
+                          height: ResponsiveHelper.getIconSize(context, 40),
                         ),
                         SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
                         Column(
@@ -370,7 +370,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                           'Số dư ví',
                           style: ResponsiveHelper.responsiveTextStyle(
                             context: context,
-                            baseSize: 10,
+                            baseSize: 12,
                             color: Colors.white.withOpacity(0.9),
                             fontWeight: FontWeight.w500,
                           ),
@@ -450,7 +450,11 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             children: [
               Expanded(
                 child: _buildModernStatCard(
-                  icon: Icons.shopping_cart_rounded,
+                  icon: Image.asset(
+                    'assets/order_list.png',
+                    width: ResponsiveHelper.getIconSize(context, 50),
+                    height: ResponsiveHelper.getIconSize(context, 50),
+                  ),
                   title: 'Đơn hàng',
                   value: _isLoadingStats ? '...' : '$_totalOrders',
                   color: AppColors.secondary,
@@ -460,17 +464,25 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
               Expanded(
                 child: _buildModernStatCard(
-                  icon: Icons.pending_actions_rounded,
+                  icon: Image.asset(
+                    'assets/order_process.png',
+                    width: ResponsiveHelper.getIconSize(context, 50),
+                    height: ResponsiveHelper.getIconSize(context, 50),
+                  ),
                   title: 'Đang\nxử lý',
                   value: _isLoadingStats ? '...' : '$_pendingOrders',
-                  color: AppColors.warning,
-                  gradient: [AppColors.warning, AppColors.warning.withOpacity(0.7)],
+                  color: AppColors.blue,
+                  gradient: [AppColors.blue, AppColors.blue.withOpacity(0.7)],
                 ),
               ),
               SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
               Expanded(
                 child: _buildModernStatCard(
-                  icon: Icons.check_circle_rounded,
+                  icon: Image.asset(
+                    'assets/order_success.png',
+                    width: ResponsiveHelper.getIconSize(context, 50),
+                    height: ResponsiveHelper.getIconSize(context, 50),
+                  ),
                   title: 'Hoàn thành',
                   value: _isLoadingStats ? '...' : '$_completedOrders',
                   color: AppColors.success,
@@ -485,7 +497,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   }
 
   Widget _buildModernStatCard({
-    required IconData icon,
+    required Widget icon,
     required String title,
     required String value,
     required Color color,
@@ -521,11 +533,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 25)),
               ),
-              child: Icon(
-                icon,
-                size: ResponsiveHelper.getIconSize(context, 28),
-                color: Colors.white,
-              ),
+              child: icon,
             ),
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Text(
@@ -594,7 +602,11 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
             childAspectRatio: 1.1,
             children: [
               _buildModernActionCard(
-                icon: Icons.shopping_bag_rounded,
+                icon: Image.asset(
+                  'assets/logo.png',
+                  width: ResponsiveHelper.getIconSize(context, 30),
+                  height: ResponsiveHelper.getIconSize(context, 30),
+                ),
                 title: 'Mua sắm',
                 subtitle: 'Mua sắm ngay',
                 color: AppColors.success,
@@ -608,7 +620,11 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 },
               ),
               _buildModernActionCard(
-                icon: Icons.account_balance_wallet_rounded,
+                icon: Image.asset(
+                  'assets/wallet.png',
+                  width: ResponsiveHelper.getIconSize(context, 30),
+                  height: ResponsiveHelper.getIconSize(context, 30),
+                ),
                 title: 'Ngân sách',
                 subtitle: 'Quản lý chi tiêu',
                 color: AppColors.warning,
@@ -629,7 +645,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
   }
 
   Widget _buildModernActionCard({
-    required IconData icon,
+    required Widget icon,
     required String title,
     required String subtitle,
     required Color color,
@@ -679,11 +695,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: ResponsiveHelper.getIconSize(context, 30),
-                color: Colors.white,
-              ),
+              child: icon,
             ),
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Text(

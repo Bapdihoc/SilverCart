@@ -17,8 +17,10 @@ class RoleSelectionPage extends StatelessWidget {
             padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
             child: Column(
               children: [
-                SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context) * 0.5),
-                
+                SizedBox(
+                  height: ResponsiveHelper.getExtraLargeSpacing(context) * 0.5,
+                ),
+
                 // Modern Logo Section
                 Center(
                   child: Column(
@@ -45,15 +47,17 @@ class RoleSelectionPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Icon(
-                          Icons.shopping_cart_rounded,
-                          size: ResponsiveHelper.getIconSize(context, 50),
-                          color: Colors.white,
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: ResponsiveHelper.getIconSize(context, 50),
+                          height: ResponsiveHelper.getIconSize(context, 50),
                         ),
                       ),
-                      
-                      SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                      
+
+                      SizedBox(
+                        height: ResponsiveHelper.getLargeSpacing(context),
+                      ),
+
                       // App Title
                       Text(
                         'SilverCart',
@@ -64,9 +68,9 @@ class RoleSelectionPage extends StatelessWidget {
                           color: AppColors.primary,
                         ),
                       ),
-                      
+
                       SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                      
+
                       // Subtitle
                       Text(
                         'Chọn loại tài khoản để tiếp tục',
@@ -79,54 +83,168 @@ class RoleSelectionPage extends StatelessWidget {
                     ],
                   ),
                 ),
+                SizedBox(
+                  height: ResponsiveHelper.getExtraLargeSpacing(context),
+                ),
+                GestureDetector(
+                  onTap: () => context.go('/login/family'),
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(
+                      ResponsiveHelper.getLargeSpacing(context),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white, width: 1),
+                      // gradient: LinearGradient(
+                      //   colors: [
+                      //     AppColors.primary,
+                      //     AppColors.primary.withOpacity(0.8),
+                      //   ],
+                      //   begin: Alignment.topLeft,
+                      // ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black,
+                          blurRadius: 2,
+                          offset: const Offset(2, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/volunteer.png',
+                            width: ResponsiveHelper.getIconSize(context, 150),
+                            height: ResponsiveHelper.getIconSize(context, 150),
+                          ),
+                        ),
+                        SizedBox(
+                          width: ResponsiveHelper.getLargeSpacing(context),
+                        ),
+                        Text(
+                          'Người thân',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
-                SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+                SizedBox(
+                  height: ResponsiveHelper.getExtraLargeSpacing(context),
+                ),
+
+                GestureDetector(
+                  onTap: () => context.go('/login/elderly'),
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(
+                      ResponsiveHelper.getLargeSpacing(context),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white, width: 1),
+                      // gradient: LinearGradient(
+                      //   colors: [
+                      //     AppColors.primary,
+                      //     AppColors.primary.withOpacity(0.8),
+                      //   ],
+                      //   begin: Alignment.topLeft,
+                      // ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black,
+                          blurRadius: 2,
+                          offset: const Offset(2, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/elder2.jpg',
+                            width: ResponsiveHelper.getIconSize(context, 150),
+                            height: ResponsiveHelper.getIconSize(context, 150),
+                          ),
+                        ),
+                        SizedBox(
+                          width: ResponsiveHelper.getLargeSpacing(context),
+                        ),
+                        Text(
+                          'Người cao tuổi',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
                 // Family Member Card
-                _buildModernCard(
-                  context: context,
-                  title: 'Người thân',
-                  subtitle: 'Quản lý mua sắm cho người thân',
-                  icon: Icons.family_restroom_rounded,
-                  iconColor: AppColors.primary,
-                  gradientColors: [
-                    AppColors.primary.withOpacity(0.1),
-                    AppColors.primary.withOpacity(0.05),
-                  ],
-                  onTap: () => context.go('/login/family'),
-                  features: [
-                    'Quản lý danh sách người thân',
-                    'Theo dõi chi tiêu',
-                    'Duyệt đơn hàng',
-                  ],
+                // _buildModernCard(
+                //   context: context,
+                //   title: 'Người thân',
+                //   subtitle: 'Quản lý mua sắm cho người thân',
+                //   icon: Icons.family_restroom_rounded,
+                //   iconColor: AppColors.primary,
+                //   gradientColors: [
+                //     AppColors.primary.withOpacity(0.1),
+                //     AppColors.primary.withOpacity(0.05),
+                //   ],
+                //   onTap: () => context.go('/login/family'),
+                //   features: [
+                //     'Quản lý danh sách người thân',
+                //     'Theo dõi chi tiêu',
+                //     'Duyệt đơn hàng',
+                //   ],
+                // ),
+
+                // SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+
+                // // Elderly Card
+                // _buildModernCard(
+                //   context: context,
+                //   title: 'Người cao tuổi',
+                //   subtitle: 'Mua sắm trực tiếp',
+                //   icon: Icons.qr_code_scanner_rounded,
+                //   iconColor: AppColors.secondary,
+                //   gradientColors: [
+                //     AppColors.secondary.withOpacity(0.1),
+                //     AppColors.secondary.withOpacity(0.05),
+                //   ],
+                //   onTap: () => context.go('/login/elderly'),
+                //   features: [
+                //     'Quét mã QR để đăng nhập',
+                //     'Mua sắm trực tiếp',
+                //     'Xem lịch sử đơn hàng',
+                //   ],
+                // ),
+
+                SizedBox(
+                  height: ResponsiveHelper.getExtraLargeSpacing(context),
                 ),
-
-                SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-
-                // Elderly Card
-                _buildModernCard(
-                  context: context,
-                  title: 'Người cao tuổi',
-                  subtitle: 'Mua sắm trực tiếp',
-                  icon: Icons.qr_code_scanner_rounded,
-                  iconColor: AppColors.secondary,
-                  gradientColors: [
-                    AppColors.secondary.withOpacity(0.1),
-                    AppColors.secondary.withOpacity(0.05),
-                  ],
-                  onTap: () => context.go('/login/elderly'),
-                  features: [
-                    'Quét mã QR để đăng nhập',
-                    'Mua sắm trực tiếp',
-                    'Xem lịch sử đơn hàng',
-                  ],
-                ),
-
-                SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
 
                 // Modern Register Link
                 Container(
-                  padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                  padding: EdgeInsets.all(
+                    ResponsiveHelper.getLargeSpacing(context),
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -180,7 +298,9 @@ class RoleSelectionPage extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+                SizedBox(
+                  height: ResponsiveHelper.getExtraLargeSpacing(context),
+                ),
               ],
             ),
           ),
@@ -209,10 +329,7 @@ class RoleSelectionPage extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.2),
-            width: 1,
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
@@ -263,7 +380,9 @@ class RoleSelectionPage extends StatelessWidget {
                             color: AppColors.text,
                           ),
                         ),
-                        SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                        SizedBox(
+                          height: ResponsiveHelper.getSpacing(context) / 2,
+                        ),
                         Text(
                           subtitle,
                           style: ResponsiveHelper.responsiveTextStyle(
@@ -282,40 +401,46 @@ class RoleSelectionPage extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-              
+
               // Features List
-              ...features.map((feature) => Padding(
-                padding: EdgeInsets.only(bottom: ResponsiveHelper.getSpacing(context)),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: iconColor,
-                        shape: BoxShape.circle,
+              ...features
+                  .map(
+                    (feature) => Padding(
+                      padding: EdgeInsets.only(
+                        bottom: ResponsiveHelper.getSpacing(context),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: iconColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: ResponsiveHelper.responsiveTextStyle(
+                                context: context,
+                                baseSize: 14,
+                                color: AppColors.text.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                    Expanded(
-                      child: Text(
-                        feature,
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 14,
-                          color: AppColors.text.withOpacity(0.8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )).toList(),
+                  )
+                  .toList(),
             ],
           ),
         ),
       ),
     );
   }
-} 
+}

@@ -193,10 +193,10 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ],
                           ),
-                          child: Icon(
-                            Icons.family_restroom_rounded,
-                            size: ResponsiveHelper.getIconSize(context, 50),
-                            color: Colors.white,
+                          child: Image.asset(
+                            'assets/volunteer.png',
+                            width: ResponsiveHelper.getIconSize(context, 50),
+                            height: ResponsiveHelper.getIconSize(context, 50),
                           ),
                         ),
                         

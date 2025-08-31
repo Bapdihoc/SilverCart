@@ -6,8 +6,10 @@ import '../shopping/elderly_cart_page.dart';
 import '../shopping/elderly_products_page.dart';
 import '../../network/service/auth_service.dart';
 import '../../network/service/category_service.dart';
+import '../../network/service/order_service.dart';
 import '../../models/user_detail_response.dart';
 import '../../models/root_category_response.dart';
+import '../../models/elder_order_response.dart';
 import '../../injection.dart';
 
 class ElderlyHomePage extends StatefulWidget {
@@ -23,17 +25,25 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   // Services
   late final AuthService _authService;
   late final CategoryService _categoryService;
+  late final OrderService _orderService;
   
   // Categories data
   List<dynamic> _categories = []; // Will store either UserCategoryValue or RootCategory
   bool _isLoadingCategories = false;
+  
+  // Orders data
+  List<ElderOrderData> _orders = [];
+  bool _isLoadingOrders = false;
+  String? _orderErrorMessage;
 
   @override
   void initState() {
     super.initState();
     _authService = getIt<AuthService>();
     _categoryService = getIt<CategoryService>();
+    _orderService = getIt<OrderService>();
     _loadCategories();
+    _loadOrders();
   }
 
   Future<void> _loadCategories() async {
@@ -91,6 +101,34 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() {
+      _isLoadingOrders = true;
+      _orderErrorMessage = null;
+    });
+
+    try {
+      final result = await _orderService.getOrdersByElder();
+      
+      if (result.isSuccess && result.data != null) {
+        setState(() {
+          _orders = result.data!.data;
+          _isLoadingOrders = false;
+        });
+      } else {
+        setState(() {
+          _orderErrorMessage = result.message ?? 'Không thể tải danh sách đơn hàng';
+          _isLoadingOrders = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _orderErrorMessage = 'Lỗi tải đơn hàng: ${e.toString()}';
+        _isLoadingOrders = false;
+      });
     }
   }
 
@@ -670,13 +708,259 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     );
   }
 
+  Widget _buildOrderContent() {
+    if (_isLoadingOrders) {
+      return _buildOrderLoadingState();
+    }
+    
+    if (_orderErrorMessage != null) {
+      return _buildOrderErrorState();
+    }
+    
+    if (_orders.isEmpty) {
+      return _buildOrderEmptyState();
+    }
+    
+    return Column(
+      children: _orders.map((order) {
+        return Column(
+          children: [
+            _buildModernOrderCard(order: order),
+            if (order != _orders.last) SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildOrderLoadingState() {
+    return Column(
+      children: List.generate(3, (index) => Column(
+        children: [
+          _buildOrderLoadingCard(),
+          if (index < 2) SizedBox(height: ResponsiveHelper.getSpacing(context)),
+        ],
+      )),
+    );
+  }
+
+  Widget _buildOrderLoadingCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                Spacer(),
+                Container(
+                  width: 80,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Container(
+              width: double.infinity,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+            Container(
+              width: double.infinity,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderErrorState() {
+    return Container(
+      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: ResponsiveHelper.getIconSize(context, 48),
+            color: AppColors.error,
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          Text(
+            'Không thể tải đơn hàng',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+          Text(
+            _orderErrorMessage ?? 'Đã xảy ra lỗi không xác định',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 14,
+              color: AppColors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          ElevatedButton(
+            onPressed: _loadOrders,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getLargeSpacing(context),
+                vertical: ResponsiveHelper.getSpacing(context),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text('Thử lại'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderEmptyState() {
+    return Container(
+      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context) * 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.shopping_bag_outlined,
+            size: ResponsiveHelper.getIconSize(context, 64),
+            color: AppColors.grey,
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          Text(
+            'Chưa có đơn hàng nào',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          Text(
+            'Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên của bạn',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 14,
+              color: AppColors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _selectedIndex = 0; // Switch to shopping tab
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getLargeSpacing(context) * 2,
+                vertical: ResponsiveHelper.getSpacing(context),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text('Bắt đầu mua sắm'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModernOrderCard({
-    required String orderNumber,
-    required String date,
-    required String status,
-    required List<String> items,
-    required String total,
+    required ElderOrderData order,
   }) {
+    // Helper method to get status color
+    Color getStatusColor(String status) {
+      switch (status) {
+        case 'Created':
+        case 'Paid':
+          return AppColors.primary;
+        case 'PendingChecked':
+        case 'PendingConfirm':
+        case 'PendingPickup':
+        case 'PendingDelivery':
+          return AppColors.warning;
+        case 'Shipping':
+          return AppColors.secondary;
+        case 'Delivered':
+        case 'Completed':
+          return AppColors.success;
+        case 'Canceled':
+        case 'Fail':
+          return AppColors.error;
+        default:
+          return AppColors.grey;
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -716,13 +1000,16 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                       ),
                     ),
                     SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                    Text(
-                      'Đơn hàng $orderNumber',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
+                    Expanded(
+                      child: Text(
+                        'Đơn hàng ${order.shippingCode}',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -733,11 +1020,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                     vertical: ResponsiveHelper.getSpacing(context) / 2,
                   ),
                   decoration: BoxDecoration(
-                    color: status == 'Đang giao' ? AppColors.warning : AppColors.success,
+                    color: getStatusColor(order.orderStatus),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    status,
+                    order.orderStatusText,
                     style: ResponsiveHelper.responsiveTextStyle(
                       context: context,
                       baseSize: 12,
@@ -750,7 +1037,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             ),
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Text(
-              date,
+              order.formattedCreationDate,
               style: ResponsiveHelper.responsiveTextStyle(
                 context: context,
                 baseSize: 14,
@@ -759,13 +1046,41 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
             ),
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Text(
-              items.join(', '),
+              order.productNames.join(', '),
               style: ResponsiveHelper.responsiveTextStyle(
                 context: context,
                 baseSize: 14,
                 color: AppColors.text,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
+            if (order.fullAddress.isNotEmpty) ...[
+              SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: ResponsiveHelper.getIconSize(context, 16),
+                    color: AppColors.grey,
+                  ),
+                  SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                  Expanded(
+                    child: Text(
+                      order.fullAddress,
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 12,
+                        color: AppColors.grey,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -779,7 +1094,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   ),
                 ),
                 Text(
-                  total,
+                  order.formattedTotalPrice,
                   style: ResponsiveHelper.responsiveTextStyle(
                     context: context,
                     baseSize: 16,
@@ -792,7 +1107,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
           ],
         ),
       ),
-            );
+    );
   }
 
   Widget _buildCompactOrdersPage() {
@@ -817,15 +1132,26 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
                   ),
                 ),
                 SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                Text(
-                  'Đơn hàng của tôi',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
+                Expanded(
+                  child: Text(
+                    'Đơn hàng của tôi',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
                   ),
                 ),
+                if (_isLoadingOrders)
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 2,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -834,33 +1160,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
 
           Padding(
             padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getLargeSpacing(context)),
-            child: Column(
-              children: [
-                _buildModernOrderCard(
-                  orderNumber: 'DH001',
-                  date: 'Hôm nay, 14:30',
-                  status: 'Đang giao',
-                  items: ['Gạo 5kg', 'Rau cải 1kg', 'Thịt heo 500g'],
-                  total: '150.000đ',
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                _buildModernOrderCard(
-                  orderNumber: 'DH002',
-                  date: 'Hôm qua, 09:15',
-                  status: 'Hoàn thành',
-                  items: ['Thuốc cảm', 'Nước muối sinh lý'],
-                  total: '85.000đ',
-                ),
-                SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                _buildModernOrderCard(
-                  orderNumber: 'DH003',
-                  date: '2 ngày trước',
-                  status: 'Hoàn thành',
-                  items: ['Dầu ăn', 'Nước mắm', 'Bột giặt'],
-                  total: '200.000đ',
-                ),
-              ],
-            ),
+            child: _buildOrderContent(),
           ),
 
           SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),

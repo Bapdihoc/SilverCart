@@ -729,19 +729,28 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   Widget _buildVoiceAssistantFAB() {
-    return FloatingActionButton(
-      onPressed: _toggleVoiceAssistant,
-      backgroundColor: _isListening ? AppColors.error : AppColors.secondary,
-      foregroundColor: Colors.white,
+    return GestureDetector(
+      onTap: _toggleVoiceAssistant,
+      // backgroundColor: _isListening ? AppColors.error : AppColors.secondary,
+      // foregroundColor: Colors.white,
       child: AnimatedSwitcher(
         duration: Duration(milliseconds: 300),
-        child: Icon(
-          _isListening ? Icons.mic_off : Icons.mic,
+        child:
+        _isListening?
+        Image.asset(
+          'assets/chatbot.png',
+          width: ResponsiveHelper.getIconSize(context, 65),
+          height: ResponsiveHelper.getIconSize(context, 65),
           key: ValueKey(_isListening),
-          size: ResponsiveHelper.getIconSize(context, 24),
+        ):
+        Image.asset(
+          'assets/chatbot1.png',
+          width: ResponsiveHelper.getIconSize(context, 65),
+          height: ResponsiveHelper.getIconSize(context, 65),
+          key: ValueKey(_isListening),
         ),
       ),
-      elevation: 6,
+      // elevation: 6,
     );
   }
 
@@ -960,25 +969,26 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 10,
+                  color: const Color(0xFF3B82F6).withOpacity(0.4),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
-              ],
-            ),
+              ],),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
                 IconButton(
-                  icon: Icon(
-                    Icons.shopping_cart_rounded,
-                    color: Colors.white,
-                    size: 20,
+                  icon: Image.asset(
+                    'assets/order.png',
+                    width: ResponsiveHelper.getIconSize(context, 35),
+                    height: ResponsiveHelper.getIconSize(context, 35),
                   ),
                   onPressed: () {
                     Navigator.push(

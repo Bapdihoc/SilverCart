@@ -5,6 +5,7 @@ import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
 import 'package:silvercart/models/order_statistic_response.dart';
+import 'package:silvercart/models/elder_order_response.dart';
 import 'package:silvercart/network/data/order_api_service.dart';
 import 'package:silvercart/network/data/api_response_handler.dart';
 import 'package:silvercart/network/repositories/order/order_respository.dart';
@@ -93,6 +94,19 @@ class OrderRespositoryApi implements OrderRespository {
     } catch (e) {
       if (e is DioException) {
         return ApiResponseHandler.handleError<OrderStatisticResponse>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
+
+  @override
+  Future<BaseResponse<ElderOrderResponse>> getOrdersByElder() async {
+    try {
+      final response = await _api.getOrdersByElder();
+      return BaseResponse.success(data: response);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<ElderOrderResponse>(e);
       }
       return BaseResponse.error(message: e.toString());
     }

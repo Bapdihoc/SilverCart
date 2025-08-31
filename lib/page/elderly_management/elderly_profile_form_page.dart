@@ -111,16 +111,47 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
     // Use userDetail data if available, otherwise fall back to elderly data
     if (widget.userDetail != null) {
       final userDetail = widget.userDetail!;
-      _fullNameController.text = userDetail.fullName;
-      _nicknameController.text = userDetail.userName;
+      
+      // Extract full name and nickname from combined name if available
+      final combinedName = userDetail.fullName;
+      if (combinedName.contains('(') && combinedName.contains(')')) {
+        final nameParts = combinedName.split('(');
+        if (nameParts.length == 2) {
+          _fullNameController.text = nameParts[0].trim();
+          _nicknameController.text = nameParts[1].replaceAll(')', '').trim();
+        } else {
+          _fullNameController.text = combinedName;
+          _nicknameController.text = '';
+        }
+      } else {
+        _fullNameController.text = combinedName;
+        _nicknameController.text = '';
+      }
+      
       _phoneController.text = userDetail.phoneNumber ?? '';
       _selectedDate = userDetail.birthDate;
       _selectedRelationship = userDetail.relationShip;
       _selectedGender = userDetail.gender;
-      _medicalNotesController.text = userDetail.description;
+      
+      // Extract medical notes and dietary restrictions from description
+      final description = userDetail.description;
+      if (description.isNotEmpty) {
+        final parts = description.split('\n\n');
+        for (final part in parts) {
+          if (part.startsWith('Ghi chú y tế:')) {
+            _medicalNotesController.text = part.replaceFirst('Ghi chú y tế:', '').trim();
+          } else if (part.startsWith('Hạn chế chế độ ăn:')) {
+            final restrictions = part.replaceFirst('Hạn chế chế độ ăn:', '').trim();
+            _dietaryRestrictions = restrictions.split(', ').where((r) => r.isNotEmpty).toList();
+          }
+        }
+      } else {
+        _medicalNotesController.text = '';
+        _dietaryRestrictions = [];
+      }
+      
       _emergencyContactController.text = ''; // Not available in API response
       _budgetController.text = '0'; // Not available in API response
-      _dietaryRestrictions = [];
 
       // Initialize addresses from API data
       if (userDetail.addresses.isNotEmpty) {
@@ -153,17 +184,48 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
       }
     } else if (widget.elderly != null) {
       // Fallback to elderly data if userDetail is not available
-    final elderly = widget.elderly!;
-    _fullNameController.text = elderly.fullName;
-    _nicknameController.text = elderly.nickname;
-    _phoneController.text = elderly.phone;
-    _selectedDate = elderly.dateOfBirth;
-    _selectedRelationship = elderly.relationship;
+      final elderly = widget.elderly!;
+      
+      // Extract full name and nickname from combined name if available
+      final combinedName = elderly.fullName;
+      if (combinedName.contains('(') && combinedName.contains(')')) {
+        final nameParts = combinedName.split('(');
+        if (nameParts.length == 2) {
+          _fullNameController.text = nameParts[0].trim();
+          _nicknameController.text = nameParts[1].replaceAll(')', '').trim();
+        } else {
+          _fullNameController.text = combinedName;
+          _nicknameController.text = '';
+        }
+      } else {
+        _fullNameController.text = combinedName;
+        _nicknameController.text = '';
+      }
+      
+      _phoneController.text = elderly.phone;
+      _selectedDate = elderly.dateOfBirth;
+      _selectedRelationship = elderly.relationship;
       // Note: gender field not available in current Elderly model
-    _medicalNotesController.text = elderly.medicalNotes ?? '';
-    _emergencyContactController.text = elderly.emergencyContact ?? '';
-    _budgetController.text = elderly.monthlyBudgetLimit.toString();
-    _dietaryRestrictions = elderly.dietaryRestrictions ?? [];
+      
+      // Extract medical notes and dietary restrictions from description
+      final description = elderly.medicalNotes ?? '';
+      if (description.isNotEmpty) {
+        final parts = description.split('\n\n');
+        for (final part in parts) {
+          if (part.startsWith('Ghi chú y tế:')) {
+            _medicalNotesController.text = part.replaceFirst('Ghi chú y tế:', '').trim();
+          } else if (part.startsWith('Hạn chế chế độ ăn:')) {
+            final restrictions = part.replaceFirst('Hạn chế chế độ ăn:', '').trim();
+            _dietaryRestrictions = restrictions.split(', ').where((r) => r.isNotEmpty).toList();
+          }
+        }
+      } else {
+        _medicalNotesController.text = '';
+        _dietaryRestrictions = [];
+      }
+      
+      _emergencyContactController.text = elderly.emergencyContact ?? '';
+      _budgetController.text = elderly.monthlyBudgetLimit.toString();
 
       // Initialize addresses if available
     if (elderly.addresses?.isNotEmpty == true) {
@@ -1218,9 +1280,9 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
       
       // Create ElderRequest
       final elderRequest = ElderRequest(
-        fullName: _fullNameController.text.trim(),
+        fullName: _buildCombinedFullName(),
         userName: _fullNameController.text.trim(), // Using fullName as userName
-        description: _medicalNotesController.text.trim(),
+        description: _buildCombinedDescription(),
         birthDate: _selectedDate!,
         spendlimit: double.tryParse(_budgetController.text) ?? 0.0,
         avatar: null, // TODO: Handle avatar upload
@@ -1280,6 +1342,47 @@ class _ElderlyProfileFormPageState extends State<ElderlyProfileFormPage> {
         });
       }
     }
+  }
+
+  /// Builds combined full name with nickname in format: "Họ và tên (Tên thường gọi)"
+  /// This method combines the full name and nickname into a single field for API
+  /// Example: "Nguyễn Văn A (Bác A)" or just "Nguyễn Văn A" if no nickname
+  String _buildCombinedFullName() {
+    final fullName = _fullNameController.text.trim();
+    final nickname = _nicknameController.text.trim();
+    
+    if (nickname.isNotEmpty && nickname != fullName) {
+      return '$fullName ($nickname)';
+    }
+    return fullName;
+  }
+
+  /// Builds combined description with medical notes and dietary restrictions
+  /// This method combines medical notes and dietary restrictions into a single field for API
+  /// Format: "Ghi chú y tế: [notes]\n\nHạn chế chế độ ăn: [restrictions]"
+  String _buildCombinedDescription() {
+    final medicalNotes = _medicalNotesController.text.trim();
+    final dietaryRestrictions = _dietaryRestrictions;
+    
+    List<String> parts = [];
+    
+    // Add medical notes if available
+    if (medicalNotes.isNotEmpty) {
+      parts.add('Ghi chú y tế: $medicalNotes');
+    }
+    
+    // Add dietary restrictions if available
+    if (dietaryRestrictions.isNotEmpty) {
+      parts.add('Hạn chế chế độ ăn: ${dietaryRestrictions.join(', ')}');
+    }
+    
+    // If no content, return empty string
+    if (parts.isEmpty) {
+      return '';
+    }
+    
+    // Join all parts with double line breaks for better readability
+    return parts.join('\n\n');
   }
 
   @override

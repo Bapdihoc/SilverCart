@@ -195,31 +195,13 @@ class _ElderlyLoginPageState extends State<ElderlyLoginPage> {
                 Center(
                   child: Column(
                     children: [
-                      Container(
-                        width: ResponsiveHelper.getIconSize(context, 100),
-                        height: ResponsiveHelper.getIconSize(context, 100),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(
-                            ResponsiveHelper.getIconSize(context, 50),
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.qr_code_scanner,
-                          size: ResponsiveHelper.getIconSize(context, 50),
-                          color: Colors.white,
-                        ),
+                      Image.asset(
+                        'assets/elder2.jpg',
+                        width: ResponsiveHelper.getIconSize(context, 200),
+                        height: ResponsiveHelper.getIconSize(context, 200),
                       ),
                       SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                      Text(
-                        'Đăng nhập người cao tuổi',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.secondary,
-                        ),
-                      ),
+                      
                     ],
                   ),
                 ),
@@ -441,8 +423,7 @@ class _ElderlyLoginPageState extends State<ElderlyLoginPage> {
                       SizedBox(height: ResponsiveHelper.getSpacing(context)),
                       Text(
                         '• Quét mã QR từ người thân\n'
-                        '• Hoặc nhập mã token được cung cấp\n'
-                        '• Mã sẽ tự động hết hạn sau 5 phút',
+                        '• Hoặc nhập mã token được cung cấp\n',
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 12,

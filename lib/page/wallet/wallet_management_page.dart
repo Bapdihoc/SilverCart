@@ -297,10 +297,10 @@ class _WalletManagementPageState extends State<WalletManagementPage>
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(25),
                 ),
-                child: Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: ResponsiveHelper.getIconSize(context, 24),
-                  color: Colors.white,
+                child: Image.asset(
+                  'assets/wallet.png',
+                  width: ResponsiveHelper.getIconSize(context, 50),
+                  height: ResponsiveHelper.getIconSize(context, 50),
                 ),
               ),
               SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),

@@ -5,6 +5,7 @@ import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/user_order_response.dart';
 import 'package:silvercart/models/order_statistic_response.dart';
+import 'package:silvercart/models/elder_order_response.dart';
 import 'package:silvercart/network/repositories/order/order_respository.dart';
 
 @LazySingleton()
@@ -39,5 +40,9 @@ class OrderService {
 
   Future<BaseResponse<void>> cancelOrder(String orderId, String cancelReason) async {
     return await _repo.cancelOrder(orderId, cancelReason);
+  }
+
+  Future<BaseResponse<ElderOrderResponse>> getOrdersByElder() async {
+    return await _repo.getOrdersByElder();
   }
 }

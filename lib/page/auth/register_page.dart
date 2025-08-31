@@ -157,7 +157,9 @@ class _RegisterPageState extends State<RegisterPage> {
               color: AppColors.primary,
               size: ResponsiveHelper.getIconSize(context, 20),
             ),
-            onPressed: () => context.pop(),
+            onPressed: (){
+              context.go('/role-selection');
+            },
           ),
         ),
         title: Text(
