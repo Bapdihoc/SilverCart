@@ -15,11 +15,12 @@ class AuthRepositoryApi implements AuthRepository {
   AuthApiService _api;
   AuthRepositoryApi(this._api);
   @override
-  Future<BaseResponse<LoginResponse>> signIn(String email, String password) async {
+  Future<BaseResponse<LoginResponse>> signIn(String email, String password, String fcmToken) async {
     try {
       final response = await _api.signIn({
         'userName': email,
         'password': password,
+        'deviceId': fcmToken,
       });
       return BaseResponse.success(data: response);
     } catch (e) {
@@ -105,6 +106,19 @@ class AuthRepositoryApi implements AuthRepository {
   Future<BaseResponse<void>> verifyOTP(String otpCode) async {
     try {
       await _api.verifyOTP(otpCode);
+      return BaseResponse.success(data: null);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<void>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
+
+  @override
+  Future<BaseResponse<void>> qrLogin(String token, String deviceId) async {
+    try {
+      await _api.qrLogin(token, deviceId);
       return BaseResponse.success(data: null);
     } catch (e) {
       if (e is DioException) {

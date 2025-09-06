@@ -16,6 +16,7 @@ class FamilyHomePage extends StatefulWidget {
 
 class _FamilyHomePageState extends State<FamilyHomePage> {
   int _selectedIndex = 0;
+  final GlobalKey<State<GuardianDashboardPage>> _dashboardKey = GlobalKey<State<GuardianDashboardPage>>();
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +25,7 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          GuardianDashboardPage(),
+          GuardianDashboardPage(key: _dashboardKey),
           ElderlyListPage(),
           UserOrderListPage(),
           OrderApprovalListPage(),
@@ -119,6 +120,13 @@ class _FamilyHomePageState extends State<FamilyHomePage> {
         setState(() {
           _selectedIndex = index;
         });
+        
+        // Reload dashboard data when switching back to "Tổng quan" tab
+        if (index == 0 && _dashboardKey.currentState != null) {
+          final dashboardState = _dashboardKey.currentState as dynamic;
+          dashboardState.reloadWalletBalance();
+          dashboardState.reloadOrderStatistics();
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

@@ -3,6 +3,8 @@ import 'package:injectable/injectable.dart';
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/models/wallet_response.dart';
+import 'package:silvercart/models/withdrawal_request.dart';
+import 'package:silvercart/models/withdrawal_response.dart';
 import 'package:silvercart/network/data/api_response_handler.dart';
 import 'package:silvercart/network/data/wallet_api_service.dart';
 import 'wallet_repository.dart';
@@ -38,6 +40,19 @@ class WalletRepositoryApi implements WalletRepository {
     } catch (e) {
       if (e is DioException) {
         return ApiResponseHandler.handleError<CreateOrderResponse>(e);
+      }
+      return BaseResponse.error(message: e.toString());
+    }
+  }
+
+  @override
+  Future<BaseResponse<WithdrawalResponse>> requestWithdrawal(WithdrawalRequest request) async {
+    try {
+      final response = await _apiService.requestWithdrawal(request);
+      return BaseResponse.success(data: response);
+    } catch (e) {
+      if (e is DioException) {
+        return ApiResponseHandler.handleError<WithdrawalResponse>(e);
       }
       return BaseResponse.error(message: e.toString());
     }

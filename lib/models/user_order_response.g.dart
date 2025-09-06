@@ -29,6 +29,12 @@ UserOrderData _$UserOrderDataFromJson(Map<String, dynamic> json) =>
           (json['orderDetails'] as List<dynamic>)
               .map((e) => UserOrderDetail.fromJson(e as Map<String, dynamic>))
               .toList(),
+      streetAddress: json['streetAddress'] as String?,
+      wardName: json['wardName'] as String?,
+      districtName: json['districtName'] as String?,
+      provinceName: json['provinceName'] as String?,
+      shippingCode: json['shippingCode'] as String?,
+      shippingFee: (json['shippingFee'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$UserOrderDataToJson(UserOrderData instance) =>
@@ -39,6 +45,12 @@ Map<String, dynamic> _$UserOrderDataToJson(UserOrderData instance) =>
       'orderStatus': instance.orderStatus,
       'elderName': instance.elderName,
       'orderDetails': instance.orderDetails,
+      'streetAddress': instance.streetAddress,
+      'wardName': instance.wardName,
+      'districtName': instance.districtName,
+      'provinceName': instance.provinceName,
+      'shippingCode': instance.shippingCode,
+      'shippingFee': instance.shippingFee,
     };
 
 UserOrderDetail _$UserOrderDetailFromJson(Map<String, dynamic> json) =>
@@ -46,6 +58,7 @@ UserOrderDetail _$UserOrderDetailFromJson(Map<String, dynamic> json) =>
       productName: json['productName'] as String,
       price: (json['price'] as num).toDouble(),
       quantity: (json['quantity'] as num).toInt(),
+      discount: (json['discount'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$UserOrderDetailToJson(UserOrderDetail instance) =>
@@ -53,4 +66,5 @@ Map<String, dynamic> _$UserOrderDetailToJson(UserOrderDetail instance) =>
       'productName': instance.productName,
       'price': instance.price,
       'quantity': instance.quantity,
+      'discount': instance.discount,
     };

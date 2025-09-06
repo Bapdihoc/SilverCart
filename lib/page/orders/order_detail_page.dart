@@ -59,6 +59,25 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     super.dispose();
   }
 
+  // Calculate subtotal (total price minus shipping fee)
+  double _calculateSubtotal() {
+    final shippingFee = widget.order.shippingFee ?? 0;
+    return widget.order.totalPrice - shippingFee;
+  }
+
+  // Calculate total discount amount for all products
+  double _calculateTotalDiscount() {
+    double totalDiscount = 0;
+    for (final detail in widget.order.orderDetails) {
+      if (detail.discount != null && detail.discount! > 0) {
+        final originalPrice = detail.price * detail.quantity;
+        final discountedPrice = originalPrice * (1 - detail.discount! / 100);
+        totalDiscount += originalPrice - discountedPrice;
+      }
+    }
+    return totalDiscount;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,6 +95,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                     _buildOrderStatusSection(),
                     _buildOrderInfoSection(),
                     _buildCustomerInfoSection(),
+                    _buildShippingAddressSection(),
                     _buildOrderItemsSection(),
                     _buildOrderSummarySection(),
                     if (widget.order.note.isNotEmpty) _buildOrderNoteSection(),
@@ -384,6 +404,145 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     );
   }
 
+  Widget _buildShippingAddressSection() {
+    // Only show if we have address information
+    if (widget.order.streetAddress == null || widget.order.streetAddress!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: ResponsiveHelper.getLargeSpacing(context),
+        vertical: ResponsiveHelper.getSpacing(context),
+      ),
+      padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: ResponsiveHelper.getIconSize(context, 24),
+                color: AppColors.primary,
+              ),
+              SizedBox(width: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Địa chỉ giao hàng',
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          Container(
+            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Full address
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.home_outlined,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                    Expanded(
+                      child: Text(
+                        widget.order.streetAddress!,
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                
+                // Ward, District, Province
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.location_city_outlined,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                    Expanded(
+                      child: Text(
+                        '${widget.order.wardName ?? ''}, ${widget.order.districtName ?? ''}, ${widget.order.provinceName ?? ''}',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 14,
+                          color: AppColors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                // Shipping code if available
+                if (widget.order.shippingCode != null && widget.order.shippingCode!.isNotEmpty) ...[
+                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.local_shipping_outlined,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                      Text(
+                        'Mã vận đơn: ${widget.order.shippingCode}',
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 14,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOrderItemsSection() {
     return Container(
       margin: EdgeInsets.symmetric(
@@ -465,6 +624,11 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   }
 
   Widget _buildProductItem(UserOrderDetail detail) {
+    // Calculate discounted price
+    final discountedPrice = detail.discount != null && detail.discount! > 0
+        ? detail.price * (1 - detail.discount! / 100)
+        : detail.price;
+    
     return Container(
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       decoration: BoxDecoration(
@@ -507,17 +671,54 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      CurrencyUtils.formatVND(detail.price),
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                    // Show original price with strikethrough if there's discount
+                    if (detail.discount != null && detail.discount! > 0) ...[
+                      Text(
+                        CurrencyUtils.formatVND(detail.price),
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 12,
+                          color: AppColors.grey,
+                        ).copyWith(decoration: TextDecoration.lineThrough),
                       ),
-                    ),
+                      SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                      // Discount badge
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '-${detail.discount!.toStringAsFixed(0)}%',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                    ],
+                    // Show final price (discounted or original)
+                    // Text(
+                    //   CurrencyUtils.formatVND(discountedPrice),
+                    //   style: ResponsiveHelper.responsiveTextStyle(
+                    //     context: context,
+                    //     baseSize: 14,
+                    //     fontWeight: FontWeight.w600,
+                    //     color: detail.discount != null && detail.discount! > 0 
+                    //         ? AppColors.error 
+                    //         : AppColors.primary,
+                    //   ),
+                    // ),
                     Text(
                       ' x ${detail.quantity}',
                       style: ResponsiveHelper.responsiveTextStyle(
@@ -535,7 +736,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                CurrencyUtils.formatVND(detail.price * detail.quantity),
+                CurrencyUtils.formatVND(discountedPrice * detail.quantity),
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 16,
@@ -609,7 +810,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 ),
               ),
               Text(
-                CurrencyUtils.formatVND(widget.order.totalPrice),
+                CurrencyUtils.formatVND(_calculateSubtotal()),
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 16,
@@ -618,6 +819,34 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                             ),
                           ],
                         ),
+          
+          // Show discount if any
+          if (_calculateTotalDiscount() > 0) ...[
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Giảm giá',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 16,
+                    color: AppColors.text,
+                  ),
+                ),
+                Text(
+                  '-${CurrencyUtils.formatVND(_calculateTotalDiscount())}',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 16,
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
           
           // Shipping
@@ -633,11 +862,15 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 ),
               ),
               Text(
-                'Miễn phí',
+                widget.order.shippingFee != null && widget.order.shippingFee! > 0
+                    ? CurrencyUtils.formatVND(widget.order.shippingFee!)
+                    : 'Miễn phí',
                 style: ResponsiveHelper.responsiveTextStyle(
                   context: context,
                   baseSize: 16,
-                  color: AppColors.success,
+                  color: widget.order.shippingFee != null && widget.order.shippingFee! > 0
+                      ? AppColors.text
+                      : AppColors.success,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1083,171 +1316,17 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   }
 
   void _showCancelConfirmation() {
-    final TextEditingController reasonController = TextEditingController();
-    bool isReasonEmpty = true;
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.warning_rounded,
-                      color: AppColors.error,
-                      size: ResponsiveHelper.getIconSize(context, 30),
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                  Text(
-                    'Xác nhận hủy đơn hàng',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Vui lòng cho biết lý do hủy đơn hàng:',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 16,
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isReasonEmpty ? AppColors.error : Colors.grey.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: reasonController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Nhập lý do hủy đơn hàng...',
-                        hintStyle: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 14,
-                          color: Colors.grey,
-                        ),
-                        contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-                        border: InputBorder.none,
-                      ),
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 14,
-                        color: AppColors.text,
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          isReasonEmpty = value.trim().isEmpty;
-                        });
-                      },
-                    ),
-                  ),
-                  if (isReasonEmpty) ...[
-                    SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                    Text(
-                      'Vui lòng nhập lý do hủy đơn hàng',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 12,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: ResponsiveHelper.getLargeSpacing(context),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            side: BorderSide(
-                              color: AppColors.grey.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            'Không',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: isReasonEmpty ? null : () {
-                            Navigator.of(context).pop();
-                            _cancelOrder(reasonController.text.trim());
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.error,
-                            disabledBackgroundColor: AppColors.error.withOpacity(0.5),
-                            padding: EdgeInsets.symmetric(
-                              vertical: ResponsiveHelper.getLargeSpacing(context),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Hủy đơn',
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              contentPadding: EdgeInsets.all(ResponsiveHelper.getExtraLargeSpacing(context)),
-            );
-          }
+        return _CancelOrderDialog(
+          onCancel: (String reason) {
+            Navigator.of(context).pop();
+            _cancelOrder(reason);
+          },
         );
       },
-    ).then((_) {
-      reasonController.dispose();
-    });
+    );
   }
 
   Future<void> _cancelOrder(String reason) async {
@@ -1309,24 +1388,186 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     }
   }
 
-  void _shareOrder() {
-    // TODO: Implement share functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Tính năng chia sẻ sẽ sớm được cập nhật',
-          style: ResponsiveHelper.responsiveTextStyle(
-            context: context,
-            baseSize: 14,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+}
+
+class _CancelOrderDialog extends StatefulWidget {
+  final Function(String) onCancel;
+
+  const _CancelOrderDialog({
+    required this.onCancel,
+  });
+
+  @override
+  State<_CancelOrderDialog> createState() => _CancelOrderDialogState();
+}
+
+class _CancelOrderDialogState extends State<_CancelOrderDialog> {
+  late final TextEditingController _reasonController;
+  bool _isReasonEmpty = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
+      title: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.warning_rounded,
+              color: AppColors.error,
+              size: ResponsiveHelper.getIconSize(context, 30),
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          Text(
+            'Xác nhận hủy đơn hàng',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.text,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Vui lòng cho biết lý do hủy đơn hàng:',
+            style: ResponsiveHelper.responsiveTextStyle(
+              context: context,
+              baseSize: 16,
+              color: AppColors.text,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isReasonEmpty ? AppColors.error : Colors.grey.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: _reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Nhập lý do hủy đơn hàng...',
+                hintStyle: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 14,
+                  color: Colors.grey,
+                ),
+                contentPadding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                border: InputBorder.none,
+              ),
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 14,
+                color: AppColors.text,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _isReasonEmpty = value.trim().isEmpty;
+                });
+              },
+            ),
+          ),
+          if (_isReasonEmpty) ...[
+            SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+            Text(
+              'Vui lòng nhập lý do hủy đơn hàng',
+              style: ResponsiveHelper.responsiveTextStyle(
+                context: context,
+                baseSize: 12,
+                color: AppColors.error,
+              ),
+            ),
+          ],
+          SizedBox(height: ResponsiveHelper.getExtraLargeSpacing(context)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      vertical: ResponsiveHelper.getLargeSpacing(context),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: BorderSide(
+                      color: AppColors.grey.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    'Không',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isReasonEmpty ? null : () {
+                    widget.onCancel(_reasonController.text.trim());
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    disabledBackgroundColor: AppColors.error.withOpacity(0.5),
+                    padding: EdgeInsets.symmetric(
+                      vertical: ResponsiveHelper.getLargeSpacing(context),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Text(
+                    'Hủy đơn',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      contentPadding: EdgeInsets.all(ResponsiveHelper.getExtraLargeSpacing(context)),
     );
   }
 } 

@@ -2,7 +2,6 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:silvercart/page/home.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/utils/currency_utils.dart';
@@ -92,6 +91,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
             'name': item.productName,
             'emoji': _getProductEmoji(item.productName),
             'price': item.productPrice,
+            'discount': item.discount,
+            'discountedPrice': item.discount != null && item.discount! > 0 
+                ? item.productPrice * (1 - item.discount! / 100)
+                : item.productPrice,
             'quantity': item.quantity,
             'elderly': _getSelectedElderlyName(),
             'imageUrl': item.imageUrl,
@@ -432,7 +435,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     
     double subtotal = _cartItems.fold(
       0,
-      (sum, item) => sum + (item['price'] * item['quantity']),
+      (sum, item) => sum + (item['discountedPrice'] * item['quantity']),
     );
     double shipping = 20000;
     
@@ -997,7 +1000,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     return Column(
       children: [
         _buildCompactPaymentMethod(),
-        _buildPromotionSection(),
+        // _buildPromotionSection(),
         _buildCompactOrderNote(),
         _buildModernOrderSummary(),
       ],
@@ -1120,30 +1123,56 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                     Row(
-                      children: [
-                           if (item['originalPrice'] != null) ...[
-                          Text(
-                            CurrencyUtils.formatVND(item['originalPrice']),
-                            style: ResponsiveHelper.responsiveTextStyle(
-                              context: context,
-                              baseSize: 12,
-                              color: AppColors.grey,
-                            ).copyWith(decoration: TextDecoration.lineThrough),
-                          ),
-                          SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                        ],
-                        Text(
-                          CurrencyUtils.formatVND(item['price']),
-                          style: ResponsiveHelper.responsiveTextStyle(
-                            context: context,
-                            baseSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Show original price with strikethrough if there's discount
+                            if (item['discount'] != null && item['discount'] > 0) Row(children: [
+                              Text(
+                                CurrencyUtils.formatVND(item['price']),
+                                style: ResponsiveHelper.responsiveTextStyle(
+                                  context: context,
+                                  baseSize: 12,
+                                  color: AppColors.grey,
+                                ).copyWith(decoration: TextDecoration.lineThrough),
+                              ),
+                              SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                              // Discount badge
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '-${item['discount'].toStringAsFixed(0)}%',
+                                  style: ResponsiveHelper.responsiveTextStyle(
+                                    context: context,
+                                    baseSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                            ]),
+                            // Show final price (discounted or original)
+                            Text(
+                              CurrencyUtils.formatVND(item['discountedPrice']),
+                              style: ResponsiveHelper.responsiveTextStyle(
+                                context: context,
+                                baseSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: item['discount'] != null && item['discount'] > 0 
+                                    ? AppColors.error 
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                     ),
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -1582,21 +1611,21 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
                       },
                       showWarning: false,
                     );
-                  case 2: // PayOS
-                    return _buildPaymentMethodCard(
-                      icon: Icons.credit_card_rounded,
-                      title: 'PAYOS',
-                      subtitle: 'Thẻ tín dụng',
-                      isSelected: _paymentMethod == 'PayOS',
-                      isDisabled: false,
-                      color: AppColors.secondary,
-                      onTap: () {
-                        setState(() {
-                          _paymentMethod = 'PayOS';
-                        });
-                      },
-                      showWarning: false,
-                    );
+                  // case 2: // PayOS
+                  //   return _buildPaymentMethodCard(
+                  //     icon: Icons.credit_card_rounded,
+                  //     title: 'PAYOS',
+                  //     subtitle: 'Thẻ tín dụng',
+                  //     isSelected: _paymentMethod == 'PayOS',
+                  //     isDisabled: false,
+                  //     color: AppColors.secondary,
+                  //     onTap: () {
+                  //       setState(() {
+                  //         _paymentMethod = 'PayOS';
+                  //       });
+                  //     },
+                  //     showWarning: false,
+                  //   );
                   default:
                     return const SizedBox.shrink();
                 }
@@ -1998,7 +2027,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
   Widget _buildModernOrderSummary() {
     double subtotal = _cartItems.fold(
       0,
-      (sum, item) => sum + (item['price'] * item['quantity']),
+      (sum, item) => sum + (item['discountedPrice'] * item['quantity']),
     );
     double shipping = _shippingFee;
     
@@ -2635,7 +2664,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         userPromotionId: _selectedPromotionId, // Add selected promotion ID
       );
 
-      await _cartService.changeCartStatus(_cartData!.cartId, 1);
+      // await _cartService.changeCartStatus(_cartData!.cartId, 1);
       
       // Call appropriate API based on effective payment method
       late final BaseResponse<CreateOrderResponse> result;
@@ -2646,6 +2675,7 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         result = await _orderService.checkoutByWallet(createOrderRequest);
       } else {
         // VNPay/PayOS - external payment
+        log('Test Create Order: ${createOrderRequest.toJson()}');
         result = await _orderService.createOrder(createOrderRequest);
       }
       
@@ -2659,14 +2689,15 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         //   MaterialPageRoute(builder: (context) => const HomePage()),
         //   (route) => false,
         //  );
-             final String? paymentUrl = result.data?.data;
+          final String? paymentUrl = result.data?.data;
           if (paymentUrl != null) {
             final uri = Uri.parse(paymentUrl);
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           }
         } else {
           // External payment - launch payment URL
-          final String? paymentUrl = result.data?.data;
+          log('Test Payment URL: ${result.data?.data}');
+          final String? paymentUrl = result.data?.data['result'];
           if (paymentUrl != null) {
             final uri = Uri.parse(paymentUrl);
             await launchUrl(uri, mode: LaunchMode.externalApplication);

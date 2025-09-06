@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../shopping/product_catalog_page.dart';
-import '../budget/budget_overview_page.dart';
+import '../budget/elder_budget_page.dart';
 import '../wallet/wallet_management_page.dart';
+import '../reports/elderly_reports_overview_page.dart';
 import '../../network/service/wallet_service.dart';
 import '../../network/service/auth_service.dart';
 import '../../network/service/order_service.dart';
@@ -77,6 +78,14 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
     }
   }
 
+  // Public method to reload wallet balance
+  Future<void> reloadWalletBalance() async {
+    setState(() {
+      _isLoadingBalance = true;
+    });
+    await _loadWalletBalance();
+  }
+
   Future<void> _loadOrderStatistics() async {
     try {
       final userId = await _authService.getUserId();
@@ -104,6 +113,14 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
         _isLoadingStats = false;
       });
     }
+  }
+
+  // Public method to reload order statistics
+  Future<void> reloadOrderStatistics() async {
+    setState(() {
+      _isLoadingStats = true;
+    });
+    await _loadOrderStatistics();
   }
 
   void _startAutoScroll() {
@@ -507,6 +524,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
     return GestureDetector(
       onTap: onTap ?? () {},
       child: Container(
+        height: 180, // Cố định chiều cao cho tất cả card
         padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -524,6 +542,7 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
           ],
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Phân bố đều các phần tử
           children: [
             // Icon tròn với background
             Container(
@@ -535,7 +554,6 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
               ),
               child: icon,
             ),
-            SizedBox(height: ResponsiveHelper.getSpacing(context)),
             Text(
               value,
               style: ResponsiveHelper.responsiveTextStyle(
@@ -553,6 +571,9 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                 color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -632,13 +653,92 @@ class _GuardianDashboardPageState extends State<GuardianDashboardPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const BudgetOverviewPage(),
+                      builder: (context) => const ElderBudgetPage(),
                     ),
                   );
                 },
               ),
+            
             ],
           ),
+          SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
+          GestureDetector(
+            onTap: () {
+            Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ElderlyReportsOverviewPage(),
+                    ),
+                  );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 25,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                width: ResponsiveHelper.getIconSize(context, 60),
+                height: ResponsiveHelper.getIconSize(context, 60),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.error,
+                      AppColors.error.withOpacity(0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(ResponsiveHelper.getIconSize(context, 30)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.error.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                    child: Image.asset(
+                      'assets/report.png',
+                      width: ResponsiveHelper.getIconSize(context, 30),
+                      height: ResponsiveHelper.getIconSize(context, 30),
+                    ),
+                  ),
+                   SizedBox(height: ResponsiveHelper.getSpacing(context)),
+              Text(
+                'Lịch sử tư vấn',
+                textAlign: TextAlign.center,
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
+              ),
+              SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+              Text(
+                'Xem lịch sử tư vấn',
+                textAlign: TextAlign.center,
+                style: ResponsiveHelper.responsiveTextStyle(
+                  context: context,
+                  baseSize: 12,
+                  color: AppColors.grey,
+                ),
+              ),
+                ],
+              ),
+            ),
+          )
         ],
       ),
     );

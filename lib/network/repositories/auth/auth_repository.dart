@@ -6,7 +6,7 @@ import 'package:silvercart/models/user_me_response.dart';
 import 'package:silvercart/models/qr_generate_response.dart';
 
 abstract class AuthRepository {
-  Future<BaseResponse<LoginResponse>> signIn(String email, String password);
+  Future<BaseResponse<LoginResponse>> signIn(String email, String password, String fcmToken);
   // Future<void> signUp(String email, String password);
   Future<void> signOut();
   Future<void> signUp({
@@ -20,6 +20,7 @@ abstract class AuthRepository {
   Future<BaseResponse<QrGenerateResponse>> generateQr(String userId);
   Future<BaseResponse<void>> sendOTP(String emailOrPhone);
   Future<BaseResponse<void>> verifyOTP(String otpCode);
+  Future<BaseResponse<void>> qrLogin(String token, String deviceId);
   Future<BaseResponse<UserDetailResponse>> getUserDetail(String id);
   Future<BaseResponse<UserMeResponse>> getMe();
 }

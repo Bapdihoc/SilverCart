@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/utils/currency_utils.dart';
 import '../../models/elder_carts_response.dart';
-import '../../models/create_order_request.dart';
-import '../../network/service/order_service.dart';
-import '../../network/service/auth_service.dart';
-import '../../injection.dart';
+import 'cart_payment_page.dart';
 
 class CartApprovalDetailPage extends StatefulWidget {
   final ElderCartData cart;
@@ -26,16 +22,12 @@ class _CartApprovalDetailPageState extends State<CartApprovalDetailPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late final OrderService _orderService;
-  late final AuthService _authService;
   
   bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
-    _orderService = getIt<OrderService>();
-    _authService = getIt<AuthService>();
     
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -933,63 +925,45 @@ class _CartApprovalDetailPageState extends State<CartApprovalDetailPage>
     });
 
     try {
-      final dataElder = await _authService.getUserDetail(widget.cart.elderId);
-      
-      if (dataElder.isSuccess && dataElder.data != null) {
-        String addressId = dataElder.data!.data.addresses[0].id;
-        
-        final result = await _orderService.createOrder(
-          CreateOrderRequest(
-            cartId: widget.cart.cartId, 
-            note: '', 
-            addressId: addressId,
+      // Navigate to payment page
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (context) => CartPaymentPage(cart: widget.cart),
+        ),
+      );
+
+      if (result == true && mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                Expanded(
+                  child: Text(
+                    'Đã duyệt đơn hàng thành công! 🎉',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
         );
         
-        String url = result.data?.data ?? '';
-        
-        if (result.isSuccess && url.isNotEmpty) {
-          final uri = Uri.parse(url);
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          
-          // Show success message
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                    Expanded(
-                      child: Text(
-                        'Đã duyệt đơn hàng thành công! 🎉',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 14,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            
-            // Go back after success
-            Navigator.of(context).pop(true); // Return true to indicate success
-          }
-        } else {
-          throw Exception(result.message ?? 'Không thể tạo đơn hàng');
-        }
-      } else {
-        throw Exception('Không thể lấy thông tin địa chỉ người cao tuổi');
+        // Go back after success
+        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {

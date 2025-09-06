@@ -39,6 +39,7 @@ class CartRepositoryMock implements CartRepository {
             quantity: 2,
             productPrice: 350000,
             imageUrl: 'https://example.com/images/gay-chong-den.jpg',
+            discount: 10.0, // 10% discount
           ),
           CartGetItem(
             productVariantId: '665c726b-e9f7-4e5b-2b38-08ddd50d48f1',
@@ -46,6 +47,7 @@ class CartRepositoryMock implements CartRepository {
             quantity: 3,
             productPrice: 360000,
             imageUrl: null,
+            discount: null, // No discount
           ),
         ],
       ),
@@ -73,6 +75,7 @@ class CartRepositoryMock implements CartRepository {
             quantity: 1,
             productPrice: 250000,
             imageUrl: null,
+            discount: null, // No discount
           ),
           CartGetItem(
             productVariantId: 'c3300519-4f22-4f0a-2b37-08ddd50d48f3',
@@ -80,6 +83,7 @@ class CartRepositoryMock implements CartRepository {
             quantity: 1,
             productPrice: 850000,
             imageUrl: null,
+            discount: 15.0, // 15% discount
           ),
           CartGetItem(
             productVariantId: 'd4400519-4f22-4f0a-2b37-08ddd50d48f4',
@@ -87,6 +91,7 @@ class CartRepositoryMock implements CartRepository {
             quantity: 2,
             productPrice: 180000,
             imageUrl: null,
+            discount: 5.0, // 5% discount
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:silvercart/core/models/base_response.dart';
@@ -19,8 +21,8 @@ class AuthService {
   static const String _userRoleKey = 'user_role';
   static const String _expirationKey = 'token_expiration';
 
-  Future<BaseResponse<LoginResponse>> signIn(String email, String password) async {
-    final result = await _repo.signIn(email, password);
+  Future<BaseResponse<LoginResponse>> signIn(String email, String password, String fcmToken) async {
+    final result = await _repo.signIn(email, password, fcmToken);
     
     // If login successful, save tokens and user data
     if (result.isSuccess && result.data != null) {
@@ -68,6 +70,12 @@ class AuthService {
 
   Future<BaseResponse<void>> verifyOTP(String otpCode) async {
     return await _repo.verifyOTP(otpCode);
+  }
+
+  Future<BaseResponse<void>> qrLogin(String token, String deviceId) async {
+    log('🔑 AuthService: QrLogin: $token, $deviceId');
+     await _repo.qrLogin(token, deviceId);
+    return await validateToken(token);
   }
 
   Future<BaseResponse<UserDetailResponse>> getUserDetail(String id) async {

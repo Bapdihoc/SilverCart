@@ -318,9 +318,9 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
               title: 'Liên hệ hỗ trợ',
               subtitle: 'Chat với đội ngũ hỗ trợ',
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SupportChatPage()),
-                );
+                // Navigator.of(context).push(
+                //   MaterialPageRoute(builder: (context) => const SupportChatPage()),
+                // );
               },
             ),
             _buildSettingsItem(

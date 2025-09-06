@@ -23,6 +23,7 @@ import 'package:silvercart/network/data/payment_history_api_service.dart'
     as _i612;
 import 'package:silvercart/network/data/product_api_service.dart' as _i795;
 import 'package:silvercart/network/data/promotion_api_service.dart' as _i664;
+import 'package:silvercart/network/data/report_api_service.dart' as _i1017;
 import 'package:silvercart/network/data/shipping_api_service.dart' as _i794;
 import 'package:silvercart/network/data/wallet_api_service.dart' as _i489;
 import 'package:silvercart/network/repositories/auth/auth_repository.dart'
@@ -73,6 +74,12 @@ import 'package:silvercart/network/repositories/promotion/promotion_repository_a
     as _i95;
 import 'package:silvercart/network/repositories/promotion/promotion_repository_mock.dart'
     as _i1010;
+import 'package:silvercart/network/repositories/report/report_repository.dart'
+    as _i688;
+import 'package:silvercart/network/repositories/report/report_repository_api.dart'
+    as _i634;
+import 'package:silvercart/network/repositories/report/report_repository_mock.dart'
+    as _i1035;
 import 'package:silvercart/network/repositories/shipping/shipping_repository.dart'
     as _i745;
 import 'package:silvercart/network/repositories/shipping/shipping_repository_api.dart'
@@ -85,7 +92,6 @@ import 'package:silvercart/network/repositories/wallet/wallet_repository_api.dar
     as _i361;
 import 'package:silvercart/network/repositories/wallet/wallet_repository_mock.dart'
     as _i1062;
-import 'package:silvercart/network/service/agora_chat_service.dart' as _i416;
 import 'package:silvercart/network/service/agora_service.dart' as _i50;
 import 'package:silvercart/network/service/auth_service.dart' as _i567;
 import 'package:silvercart/network/service/cart_service.dart' as _i971;
@@ -98,6 +104,7 @@ import 'package:silvercart/network/service/payment_history_service.dart'
     as _i124;
 import 'package:silvercart/network/service/product_service.dart' as _i24;
 import 'package:silvercart/network/service/promotion_service.dart' as _i231;
+import 'package:silvercart/network/service/report_service.dart' as _i939;
 import 'package:silvercart/network/service/shipping_service.dart' as _i274;
 import 'package:silvercart/network/service/speech_service.dart' as _i773;
 import 'package:silvercart/network/service/user_session_service.dart' as _i385;
@@ -124,7 +131,6 @@ extension GetItInjectableX on _i174.GetIt {
     final locationApiModule = _$LocationApiModule();
     final cartServiceModule = _$CartServiceModule();
     gh.singleton<_i50.AgoraService>(() => _i50.AgoraService());
-    gh.singleton<_i416.AgoraChatService>(() => _i416.AgoraChatService());
     gh.singleton<_i773.SpeechService>(() => _i773.SpeechService());
     gh.lazySingleton<_i385.UserSessionService>(
       () => _i385.UserSessionService(),
@@ -170,6 +176,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i612.PaymentHistoryApiService>(
       () => dioModule.providePaymentHistoryApiService(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i1017.ReportApiService>(
+      () => dioModule.provideReportApiService(gh<_i361.Dio>()),
+    );
     gh.lazySingleton<_i66.CartApiService>(
       () => cartApiModule.provideCartApiService(gh<_i361.Dio>()),
     );
@@ -200,6 +209,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i69.AuthRepository>(
       () => _i749.AuthRepositoryApi(gh<_i440.AuthApiService>()),
       registerFor: {_prod},
+    );
+    gh.lazySingleton<_i688.ReportRepository>(
+      () => _i1035.ReportRepositoryMock(),
+      registerFor: {_dev},
     );
     gh.lazySingleton<_i339.PaymentHistoryRepository>(
       () => _i28.PaymentHistoryRepositoryMock(),
@@ -238,8 +251,15 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i24.ProductService>(
       () => _i24.ProductService(gh<_i249.ProductRepository>()),
     );
+    gh.lazySingleton<_i688.ReportRepository>(
+      () => _i634.ReportRepositoryApi(gh<_i1017.ReportApiService>()),
+      registerFor: {_prod},
+    );
     gh.lazySingleton<_i800.WalletService>(
       () => _i800.WalletService(gh<_i485.WalletRepository>()),
+    );
+    gh.lazySingleton<_i939.ReportService>(
+      () => _i939.ReportService(gh<_i688.ReportRepository>()),
     );
     gh.lazySingleton<_i40.ElderRepository>(
       () => _i437.ElderRepositoryApi(gh<_i269.ElderApiService>()),

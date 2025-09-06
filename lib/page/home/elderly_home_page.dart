@@ -6,10 +6,10 @@ import '../shopping/elderly_cart_page.dart';
 import '../shopping/elderly_products_page.dart';
 import '../../network/service/auth_service.dart';
 import '../../network/service/category_service.dart';
-import '../../network/service/order_service.dart';
+import '../../network/service/cart_service.dart';
 import '../../models/user_detail_response.dart';
 import '../../models/root_category_response.dart';
-import '../../models/elder_order_response.dart';
+import '../../models/cart_get_response.dart';
 import '../../injection.dart';
 
 class ElderlyHomePage extends StatefulWidget {
@@ -25,14 +25,14 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   // Services
   late final AuthService _authService;
   late final CategoryService _categoryService;
-  late final OrderService _orderService;
+  late final CartService _cartService;
   
   // Categories data
   List<dynamic> _categories = []; // Will store either UserCategoryValue or RootCategory
   bool _isLoadingCategories = false;
   
-  // Orders data
-  List<ElderOrderData> _orders = [];
+  // Orders data (from cart data)
+  List<CartGetData> _orders = [];
   bool _isLoadingOrders = false;
   String? _orderErrorMessage;
 
@@ -41,7 +41,7 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     super.initState();
     _authService = getIt<AuthService>();
     _categoryService = getIt<CategoryService>();
-    _orderService = getIt<OrderService>();
+    _cartService = getIt<CartService>();
     _loadCategories();
     _loadOrders();
   }
@@ -111,19 +111,43 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     });
 
     try {
-      final result = await _orderService.getOrdersByElder();
+      // Get elderly ID from SharedPreferences
+      final elderId = await _authService.getUserId();
       
-      if (result.isSuccess && result.data != null) {
+      if (elderId == null) {
         setState(() {
-          _orders = result.data!.data;
+          _orderErrorMessage = 'Không tìm thấy thông tin người dùng';
           _isLoadingOrders = false;
         });
-      } else {
-        setState(() {
-          _orderErrorMessage = result.message ?? 'Không thể tải danh sách đơn hàng';
-          _isLoadingOrders = false;
-        });
+        return;
       }
+
+      // Call API with different statuses and combine results
+      final List<CartGetData> allOrders = [];
+      
+      // Status 1: Submitted (chờ duyệt)
+      final result1 = await _cartService.getCartByElderId(elderId, 1);
+      if (result1.isSuccess && result1.data?.data != null) {
+        allOrders.add(result1.data!.data);
+      }
+      
+      // Status 2: Approved (đã duyệt) 
+      final result2 = await _cartService.getCartByElderId(elderId, 2);
+      if (result2.isSuccess && result2.data?.data != null) {
+        allOrders.add(result2.data!.data);
+      }
+      
+      // Status 3: Rejected (từ chối)
+      final result3 = await _cartService.getCartByElderId(elderId, 3);
+      if (result3.isSuccess && result3.data?.data != null) {
+        allOrders.add(result3.data!.data);
+      }
+
+      setState(() {
+        _orders = allOrders;
+        _isLoadingOrders = false;
+      });
+      
     } catch (e) {
       setState(() {
         _orderErrorMessage = 'Lỗi tải đơn hàng: ${e.toString()}';
@@ -722,11 +746,11 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
     }
     
     return Column(
-      children: _orders.map((order) {
+      children: _orders.map((cartData) {
         return Column(
           children: [
-            _buildModernOrderCard(order: order),
-            if (order != _orders.last) SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            _buildModernOrderCard(cartData: cartData),
+            if (cartData != _orders.last) SizedBox(height: ResponsiveHelper.getSpacing(context)),
           ],
         );
       }).toList(),
@@ -935,171 +959,192 @@ class _ElderlyHomePageState extends State<ElderlyHomePage> {
   }
 
   Widget _buildModernOrderCard({
-    required ElderOrderData order,
+    required CartGetData cartData,
   }) {
+    // Convert cart status to display text and colors
+    String getStatusText(String status) {
+      switch (status.toLowerCase()) {
+        case 'pending':
+          return 'Chờ duyệt';
+        case 'approve':
+          return 'Đã duyệt';
+        case 'reject':
+          return 'Từ chối';
+        default:
+          return 'Không xác định';
+      }
+    }
+
     // Helper method to get status color
     Color getStatusColor(String status) {
-      switch (status) {
-        case 'Created':
-        case 'Paid':
-          return AppColors.primary;
-        case 'PendingChecked':
-        case 'PendingConfirm':
-        case 'PendingPickup':
-        case 'PendingDelivery':
-          return AppColors.warning;
-        case 'Shipping':
-          return AppColors.secondary;
-        case 'Delivered':
-        case 'Completed':
-          return AppColors.success;
-        case 'Canceled':
-        case 'Fail':
-          return AppColors.error;
+      switch (status.toLowerCase()) {
+        case 'pending':
+          return AppColors.warning; // Pending
+        case 'approve':
+          return AppColors.success; // Approved
+        case 'reject':
+          return AppColors.error;   // Rejected
         default:
           return AppColors.grey;
       }
     }
 
+    // Helper method to get status icon
+    IconData getStatusIcon(String status) {
+      switch (status.toLowerCase()) {
+        case 'pending':
+          return Icons.pending_actions_rounded;
+        case 'approve':
+          return Icons.check_circle_rounded;
+        case 'reject':
+          return Icons.cancel_rounded;
+        default:
+          return Icons.help_outline_rounded;
+      }
+    }
+
+    // Calculate total with discounts
+    final totalAmount = cartData.items.fold<double>(0, (sum, item) {
+      final bool hasDiscount = item.discount != null && item.discount! > 0;
+      final double unitPrice = hasDiscount
+          ? item.productPrice * (1 - item.discount! / 100)
+          : item.productPrice;
+      return sum + unitPrice * item.quantity;
+    });
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+        border: Border.all(color: getStatusColor(cartData.status).withOpacity(0.2), width: 1),
       ),
       child: Padding(
-        padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+        padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context) * 1.2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header với status nổi bật
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: ResponsiveHelper.getIconSize(context, 32),
-                      height: ResponsiveHelper.getIconSize(context, 32),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.primary.withOpacity(0.7)],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.receipt_rounded,
-                        size: ResponsiveHelper.getIconSize(context, 16),
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                    Expanded(
-                      child: Text(
-                        'Đơn hàng ${order.shippingCode}',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.text,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                // Status badge lớn và nổi bật
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: ResponsiveHelper.getSpacing(context),
                     vertical: ResponsiveHelper.getSpacing(context) / 2,
                   ),
                   decoration: BoxDecoration(
-                    color: getStatusColor(order.orderStatus),
-                    borderRadius: BorderRadius.circular(12),
+                    color: getStatusColor(cartData.status),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: getStatusColor(cartData.status).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    order.orderStatusText,
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        getStatusIcon(cartData.status),
+                        size: ResponsiveHelper.getIconSize(context, 16),
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                      Text(
+                        getStatusText(cartData.status),
+                        style: ResponsiveHelper.responsiveTextStyle(
+                          context: context,
+                          baseSize: 14,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Spacer(),
+                // Cart ID
+                Text(
+                  '#${cartData.cartId.substring(0, 8).toUpperCase()}',
+                  style: ResponsiveHelper.responsiveTextStyle(
+                    context: context,
+                    baseSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.grey,
                   ),
                 ),
               ],
             ),
+            
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            
+            // Products (gọn hơn)
             Text(
-              order.formattedCreationDate,
+              cartData.items.length > 2 
+                  ? '${cartData.items.take(2).map((item) => item.productName).join(', ')} và ${cartData.items.length - 2} sản phẩm khác'
+                  : cartData.items.map((item) => item.productName).join(', '),
               style: ResponsiveHelper.responsiveTextStyle(
                 context: context,
-                baseSize: 14,
-                color: AppColors.grey,
-              ),
-            ),
-            SizedBox(height: ResponsiveHelper.getSpacing(context)),
-            Text(
-              order.productNames.join(', '),
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
-                baseSize: 14,
+                baseSize: 16,
                 color: AppColors.text,
+                fontWeight: FontWeight.w500,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            if (order.fullAddress.isNotEmpty) ...[
-              SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    size: ResponsiveHelper.getIconSize(context, 16),
-                    color: AppColors.grey,
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-                  Expanded(
-                    child: Text(
-                      order.fullAddress,
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 12,
-                        color: AppColors.grey,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            
             SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            
+            // Bottom row: Items count và Price
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Tổng cộng:',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 14,
-                    color: AppColors.grey,
-                  ),
+                // Items count với icon
+                Row(
+                  children: [
+                    Icon(
+                      Icons.shopping_bag_rounded,
+                      size: ResponsiveHelper.getIconSize(context, 14),
+                      color: AppColors.grey,
+                    ),
+                    SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                    Text(
+                      '${cartData.items.length} sản phẩm',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 13,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  order.formattedTotalPrice,
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                // Price nổi bật
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ResponsiveHelper.getSpacing(context),
+                    vertical: ResponsiveHelper.getSpacing(context) / 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${totalAmount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}đ',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],

@@ -45,6 +45,7 @@ CartGetItem _$CartGetItemFromJson(Map<String, dynamic> json) => CartGetItem(
   quantity: (json['quantity'] as num).toInt(),
   productPrice: (json['productPrice'] as num).toDouble(),
   imageUrl: json['imageUrl'] as String?,
+  discount: (json['discount'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$CartGetItemToJson(CartGetItem instance) =>
@@ -54,4 +55,5 @@ Map<String, dynamic> _$CartGetItemToJson(CartGetItem instance) =>
       'quantity': instance.quantity,
       'productPrice': instance.productPrice,
       'imageUrl': instance.imageUrl,
+      'discount': instance.discount,
     };

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:silvercart/page/elderly_management/elderly_profile_form_page.dart';
+import 'package:silvercart/page/reports/elderly_report_list_page.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/models/elderly_model.dart';
@@ -32,12 +33,6 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
   late final ElderService _elderService;
   late final AuthService _authService;
 
-  final List<Map<String, dynamic>> _filterOptions = [
-    {'value': 'all', 'label': 'Tất cả', 'icon': Icons.group},
-    {'value': 'active', 'label': 'Hoạt động', 'icon': Icons.check_circle},
-    {'value': 'inactive', 'label': 'Không hoạt động', 'icon': Icons.cancel},
-    {'value': 'expired_qr', 'label': 'QR hết hạn', 'icon': Icons.qr_code_scanner_outlined},
-  ];
 
   @override
   void initState() {
@@ -126,12 +121,6 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
     _applyFilter();
   }
 
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
-    _applyFilter();
-  }
 
   Future<void> _navigateToAddElderly() async {
    await Navigator.of(context).push(
@@ -381,12 +370,14 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
     }
   }
 
-  void _navigateToQRManagement(Elderly elderly) {
-    // TODO: Navigate to QR management page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Chức năng quản lý QR đang phát triển'),
-        backgroundColor: AppColors.secondary,
+
+  Future<void> _navigateToElderlyReports(Elderly elderly) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ElderlyReportListPage(
+          elderlyId: elderly.id,
+          elderlyName: elderly.nickname,
+        ),
       ),
     );
   }
@@ -1671,6 +1662,34 @@ class _ElderlyListPageState extends State<ElderlyListPage> {
                           backgroundColor: Colors.transparent,
                           foregroundColor: Colors.white,
                           shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                  Expanded(
+                    child: Container(
+                      height: 36,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _navigateToElderlyReports(elderly),
+                        icon: Icon(
+                          Icons.assignment_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          'Report',
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.warning,
+                          side: BorderSide(color: AppColors.warning.withOpacity(0.7), width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

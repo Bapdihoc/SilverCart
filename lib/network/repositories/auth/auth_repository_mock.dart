@@ -10,7 +10,7 @@ import 'package:silvercart/network/repositories/auth/auth_repository.dart';
 @LazySingleton(as: AuthRepository, env: [Environment.dev])
 class AuthRepositoryMock implements AuthRepository {
   @override
-  Future<BaseResponse<LoginResponse>> signIn(String email, String password) async {
+  Future<BaseResponse<LoginResponse>> signIn(String email, String password, String fcmToken) async {
     return BaseResponse.success(data: LoginResponse(
       message: 'Login successfully',
       data: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyTmFtZSI6InRyaWN1b25nODYzNS53b3JrQGdtYWlsLmNvbSIsIlVzZXJJZCI6IjZmOGVlNGUzLWIwMGEtNDdmNy1iMDZhLTI3OGFhYTVhZjk2NyIsIlJvbGUiOiJHdWFyZGlhbiIsImV4cCI6MTc1NDU4NDI1NCwiaXNzIjoiWW91ckFwcE5hbWUiLCJhdWQiOiJZb3VyQXBwQXVkaWVuY2UifQ.5Tq5XbDLFmF9AsUtkVWO4u63EtOnAjplL6gWBtkKiSw',
@@ -43,8 +43,11 @@ class AuthRepositoryMock implements AuthRepository {
   }
 
   @override
-  Future<BaseResponse<String>> generateQrLoginToken(String value) async {
-    return BaseResponse.success(data: '123');
+  Future<BaseResponse<QrGenerateResponse>> generateQr(String userId) async {
+    return BaseResponse.success(data: QrGenerateResponse(
+      message: 'Generate QR successfully',
+      data: QrGenerateData(token: '123'),
+    ));
   }
 
   @override
@@ -54,6 +57,11 @@ class AuthRepositoryMock implements AuthRepository {
 
   @override
   Future<BaseResponse<void>> verifyOTP(String otpCode) async {
+    return BaseResponse.success(data: null);
+  }
+
+  @override
+  Future<BaseResponse<void>> qrLogin(String token, String deviceId) async {
     return BaseResponse.success(data: null);
   }
 
@@ -114,15 +122,4 @@ class AuthRepositoryMock implements AuthRepository {
     ));
   }
 
-  @override
-  Future<BaseResponse<QrGenerateResponse>> generateQr(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    return BaseResponse.success(data: QrGenerateResponse(
-      message: 'QR code generated successfully',
-      data: QrGenerateData(
-        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyTmFtZSI6Im5nIHRoYW4gMiIsIlVzZXJJZCI6ImVlMDQ2NzMwLWY2N2QtNDQ3ZC1hNWE2LTFkZmI4MGFlOGNiNyIsIlJvbGUiOiIiLCJleHAiOjE3NTQ4MjI0NjIsImlzcyI6IllvdXJBcHBOYW1lIiwiYXVkIjoiWW91ckFwcEF1ZGllbmNlIn0.38qGDqLann-l6AqG70wxYrdhFFmLvRzVffSBRD9vIPU',
-      ),
-    ));
-  }
 }

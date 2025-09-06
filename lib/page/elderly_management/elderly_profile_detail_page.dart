@@ -472,28 +472,28 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
           
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           
-          // Thống kê
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Tuổi',
-                  '${_userDetail!.age}',
-                  Icons.cake,
-                  AppColors.primary,
-                ),
-              ),
-              SizedBox(width: ResponsiveHelper.getSpacing(context)),
-              Expanded(
-                child: _buildStatCard(
-                  'Điểm thưởng',
-                  '${_userDetail!.rewardPoint}',
-                  Icons.stars,
-                  AppColors.secondary,
-                ),
-              ),
-            ],
-          ),
+          // // Thống kê
+          // Row(
+          //   children: [
+          //     Expanded(
+          //       child: _buildStatCard(
+          //         'Tuổi',
+          //         '${_userDetail!.age}',
+          //         Icons.cake,
+          //         AppColors.primary,
+          //       ),
+          //     ),
+          //     SizedBox(width: ResponsiveHelper.getSpacing(context)),
+          //     Expanded(
+          //       child: _buildStatCard(
+          //         'Điểm thưởng',
+          //         '${_userDetail!.rewardPoint}',
+          //         Icons.stars,
+          //         AppColors.secondary,
+          //       ),
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );
@@ -619,9 +619,9 @@ class _ElderlyProfileDetailPageState extends State<ElderlyProfileDetailPage> {
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
           // _buildInfoRow('Tên đăng nhập', _userDetail!.userName),
-          _buildInfoRow('Email', _userDetail!.email ?? 'Chưa cập nhật'),
+          // _buildInfoRow('Email', _userDetail!.email ?? 'Chưa cập nhật'),
           _buildInfoRow('Giới tính', _getGenderText(_userDetail!.gender)),
-          _buildInfoRow('Số điện thoại', _userDetail!.phoneNumber ?? 'Chưa cập nhật'),
+          // _buildInfoRow('Số điện thoại', _userDetail!.phoneNumber ?? 'Chưa cập nhật'),
           _buildInfoRow('Ngày sinh', '${_userDetail!.birthDate.day}/${_userDetail!.birthDate.month}/${_userDetail!.birthDate.year}'),
           _buildInfoRow('Số khẩn cấp', _userDetail!.emergencyPhoneNumber ?? 'Chưa cập nhật',),
           if (_userDetail!.description.isNotEmpty)

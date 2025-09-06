@@ -1,8 +1,13 @@
 import 'dart:developer';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:silvercart/env.dart';
+import 'package:silvercart/firebase_options.dart';
 import 'package:silvercart/injection.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
@@ -10,8 +15,95 @@ import 'package:app_links/app_links.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  showFlutterNotification(message);
+  print('Handling a background message: ${message.messageId}');
+}
+
+/// Notification plugin instance
+late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+
+/// Notification channel
+late AndroidNotificationChannel channel;
+
+/// Flag to ensure plugin is initialized once
+bool isFlutterLocalNotificationsInitialized = false;
+
+/// Setup local notifications
+Future<void> setupFlutterNotifications() async {
+  if (isFlutterLocalNotificationsInitialized) return;
+
+  flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  // Create a notification channel for Android
+  channel = const AndroidNotificationChannel(
+    'high_importance_channel', // id
+    'High Importance Notifications', // name
+    description: 'This channel is used for important notifications.',
+    importance: Importance.high,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(channel);
+
+  // iOS presentation options
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  isFlutterLocalNotificationsInitialized = true;
+}
+
+/// Show a local notification manually
+void showFlutterNotification(RemoteMessage message) {
+  RemoteNotification? notification = message.notification;
+  AndroidNotification? android = message.notification?.android;
+
+  if (notification != null && android != null && !kIsWeb) {
+    flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+    );
+  }
+}
+
+/// Foreground message handler
+Future<void> _firebaseMessagingForegroundHandler(RemoteMessage message) async {
+  showFlutterNotification(message);
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Register background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Request notification permission
+  await FirebaseMessaging.instance.requestPermission();
+
+  // Setup local notification channel
+  await setupFlutterNotifications();
+
+  // Listen to foreground messages
+  FirebaseMessaging.onMessage.listen(_firebaseMessagingForegroundHandler);
+
   await dotenv.load(fileName: '.env');
   await configureDependencies(Environments.prod); // or Environments.dev
   runApp(const MyApp());

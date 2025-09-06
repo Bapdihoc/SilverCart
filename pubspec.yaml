@@ -32,14 +32,17 @@ dependencies:
   permission_handler: ^12.0.1
   flutter_sound: ^9.2.13
   agora_rtc_engine: ^6.5.2
-  agora_chat_sdk: ^1.3.1  # Agora Chat SDK for real-time messaging
+  # agora_chat_sdk: ^1.3.1  # Agora Chat SDK for real-time messaging
   path_provider: ^2.1.5
   device_info_plus: ^11.5.0
   mobile_scanner: ^7.0.1
   url_launcher:
   app_links: ^3.5.0
   cached_network_image: ^3.3.1
-
+  flutter_html: ^3.0.0-beta.2
+  firebase_core:
+  flutter_local_notifications: 
+  firebase_messaging:
 
 dev_dependencies: 
   flutter_lints: ^5.0.0

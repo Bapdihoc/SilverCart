@@ -47,6 +47,7 @@ class CartGetItem {
   final int quantity;
   final double productPrice;
   final String? imageUrl;
+  final double? discount; // Discount percentage (0-100)
 
   CartGetItem({
     required this.productVariantId,
@@ -54,6 +55,7 @@ class CartGetItem {
     required this.quantity,
     required this.productPrice,
     this.imageUrl,
+    this.discount,
   });
 
   factory CartGetItem.fromJson(Map<String, dynamic> json) => _$CartGetItemFromJson(json);

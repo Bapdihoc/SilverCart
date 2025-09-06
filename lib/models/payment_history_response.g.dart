@@ -44,7 +44,7 @@ PaymentHistoryItem _$PaymentHistoryItemFromJson(Map<String, dynamic> json) =>
       paymentMenthod: json['paymentMenthod'] as String,
       paymentStatus: (json['paymentStatus'] as num).toInt(),
       creationDate: DateTime.parse(json['creationDate'] as String),
-      orderId: json['orderId'] as String,
+      orderId: json['orderId'] as String?,
     );
 
 Map<String, dynamic> _$PaymentHistoryItemToJson(PaymentHistoryItem instance) =>

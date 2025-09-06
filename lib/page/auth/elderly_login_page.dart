@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:get_it/get_it.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../network/service/auth_service.dart';
@@ -81,9 +82,13 @@ class _ElderlyLoginPageState extends State<ElderlyLoginPage> {
     });
 
     try {
-      final result = await _authService.validateToken(token);
+      // Get Firebase device ID
+      final deviceId = await _getFirebaseDeviceId();
       
-      if (result.isSuccess && result.data != null) {
+      // Call QR Login API with token and deviceId as query parameters
+      final result = await _authService.qrLogin(token, deviceId);
+      
+      if (result.isSuccess) {
         // Token is valid, navigate to home
         if (mounted) {
           _stopQRScan();
@@ -148,6 +153,17 @@ class _ElderlyLoginPageState extends State<ElderlyLoginPage> {
         _tokenController.clear();
       }
     });
+  }
+
+  Future<String> _getFirebaseDeviceId() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      return token ?? '';
+    } catch (e) {
+      // Fallback to empty string if Firebase token fails
+      return '';
+    }
   }
 
   @override

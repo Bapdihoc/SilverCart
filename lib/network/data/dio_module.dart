@@ -9,6 +9,7 @@ import 'auth_interceptor.dart';
 import 'category_api_service.dart';
 import 'promotion_api_service.dart';
 import 'payment_history_api_service.dart';
+import 'report_api_service.dart';
 
 @module
 abstract class DioModule {
@@ -51,4 +52,7 @@ abstract class DioModule {
 
   @LazySingleton()
   PaymentHistoryApiService providePaymentHistoryApiService(Dio dio) => PaymentHistoryApiService(dio);
+
+  @LazySingleton()
+  ReportApiService provideReportApiService(Dio dio) => ReportApiService(dio);
 } 

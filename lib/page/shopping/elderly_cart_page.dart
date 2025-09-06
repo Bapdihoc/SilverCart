@@ -437,6 +437,10 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
       'name': item.productName,
       'emoji': _getProductEmoji(item.productName),
       'price': item.productPrice,
+      'discount': item.discount,
+      'discountedPrice': item.discount != null && item.discount! > 0 
+          ? item.productPrice * (1 - item.discount! / 100)
+          : item.productPrice,
       'quantity': item.quantity,
       'imageUrl': item.imageUrl,
     }).toList();
@@ -720,7 +724,7 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
   Widget _buildElderlyCartList() {
     final total = _cartItems.fold<double>(
       0, 
-      (sum, item) => sum + (item['price'] * item['quantity']),
+      (sum, item) => sum + (item['discountedPrice'] * item['quantity']),
     );
 
     return Column(
@@ -828,15 +832,60 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
                     
                     SizedBox(height: ResponsiveHelper.getSpacing(context)),
                     
-                    // Price
-                    Text(
-                      CurrencyUtils.formatVND(item['price']),
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                    // Price with discount
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Show original price with strikethrough if there's discount
+                        if (item['discount'] != null && item['discount'] > 0) ...[
+                          Row(
+                            children: [
+                              Text(
+                                CurrencyUtils.formatVND(item['price']),
+                                style: ResponsiveHelper.responsiveTextStyle(
+                                  context: context,
+                                  baseSize: 16,
+                                  color: AppColors.grey,
+                                ).copyWith(decoration: TextDecoration.lineThrough),
+                              ),
+                              SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                              // Discount badge
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '-${item['discount'].toStringAsFixed(0)}%',
+                                  style: ResponsiveHelper.responsiveTextStyle(
+                                    context: context,
+                                    baseSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
+                        ],
+                        // Show final price (discounted or original)
+                        Text(
+                          CurrencyUtils.formatVND(item['discountedPrice']),
+                          style: ResponsiveHelper.responsiveTextStyle(
+                            context: context,
+                            baseSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: item['discount'] != null && item['discount'] > 0 
+                                ? AppColors.error 
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
                     
                     SizedBox(height: ResponsiveHelper.getSpacing(context)),
@@ -978,6 +1027,19 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
   }
 
   Widget _buildElderlyTotalSection(double total) {
+    // Calculate total savings from discounts
+    final totalSavings = _cartItems.fold<double>(
+      0,
+      (sum, item) {
+        if (item['discount'] != null && item['discount'] > 0) {
+          final originalPrice = item['price'] * item['quantity'];
+          final discountedPrice = item['discountedPrice'] * item['quantity'];
+          return sum + (originalPrice - discountedPrice);
+        }
+        return sum;
+      },
+    );
+
     return Container(
       margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
@@ -994,49 +1056,97 @@ class _ElderlyCartPageState extends State<ElderlyCartPage> {
           width: 2,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: ResponsiveHelper.getIconSize(context, 50),
-            height: ResponsiveHelper.getIconSize(context, 50),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              Icons.payments_rounded,
-              size: ResponsiveHelper.getIconSize(context, 28),
-              color: Colors.white,
-            ),
+          Row(
+            children: [
+              Container(
+                width: ResponsiveHelper.getIconSize(context, 50),
+                height: ResponsiveHelper.getIconSize(context, 50),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.payments_rounded,
+                  size: ResponsiveHelper.getIconSize(context, 28),
+                  color: Colors.white,
+                ),
+              ),
+              
+              SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tổng tiền',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    Text(
+                      CurrencyUtils.formatVND(total),
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           
-          SizedBox(width: ResponsiveHelper.getLargeSpacing(context)),
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tổng tiền',
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
+          // Show total savings if there are discounts
+          if (totalSavings > 0) ...[
+            SizedBox(height: ResponsiveHelper.getSpacing(context)),
+            Container(
+              padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.success.withOpacity(0.3),
+                  width: 1,
                 ),
-                Text(
-                  CurrencyUtils.formatVND(total),
-                  style: ResponsiveHelper.responsiveTextStyle(
-                    context: context,
-                    baseSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.savings_rounded,
+                    color: AppColors.success,
+                    size: ResponsiveHelper.getIconSize(context, 20),
                   ),
-                ),
-              ],
+                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                  Text(
+                    'Bạn đã tiết kiệm: ',
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                    ),
+                  ),
+                  Text(
+                    CurrencyUtils.formatVND(totalSavings),
+                    style: ResponsiveHelper.responsiveTextStyle(
+                      context: context,
+                      baseSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
