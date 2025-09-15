@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:silvercart/page/shopping/product_detail_page.dart';
-import 'package:silvercart/page/shopping/shopping_cart_page.dart';
+import 'package:silvercart/page/shopping/guardian_shopping_cart_page.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../core/utils/currency_utils.dart';

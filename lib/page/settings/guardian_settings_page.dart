@@ -5,7 +5,6 @@ import 'package:silvercart/injection.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/user_me_response.dart';
-import '../support/support_chat_page.dart';
 
 class GuardianSettingsPage extends StatefulWidget {
   const GuardianSettingsPage({super.key});

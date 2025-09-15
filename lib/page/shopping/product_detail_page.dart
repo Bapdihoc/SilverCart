@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'package:silvercart/page/shopping/shopping_cart_page.dart';
+import 'package:silvercart/page/shopping/guardian_shopping_cart_page.dart';
 import '../../core/constants/app_colors.dart';
 
 import '../../core/utils/responsive_helper.dart';
@@ -802,7 +802,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 ResponsiveHelper.getBorderRadius(context),
               ),
               boxShadow: [
-                BoxShadow(
+                BoxShadow( 
                   color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
