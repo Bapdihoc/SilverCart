@@ -149,6 +149,21 @@ class _WalletManagementPageState extends State<WalletManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: Text('Quản lý ví'),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history, color: Colors.white, size: 20),
+            onPressed: _showTransactionHistory,
+          ),
+        ],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SafeArea(
         child: CustomScrollView(
           primary: true,

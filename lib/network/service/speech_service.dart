@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_speech/speech_client_authenticator.dart';
-import 'package:google_speech/speech_to_text.dart';
 import 'package:google_speech/google_speech.dart';
 import 'package:google_speech/generated/google/cloud/speech/v1/cloud_speech.pbgrpc.dart' as grpc;
 import 'package:permission_handler/permission_handler.dart';
@@ -427,14 +424,6 @@ class SpeechService {
         .replaceAll('đ', 'd')
         .toLowerCase();
   }
-
- 
-
-
-
-
-
-
 
   // Stop listening
   void stopListening() {
