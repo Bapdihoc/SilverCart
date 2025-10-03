@@ -26,6 +26,13 @@ class UserOrderData {
   final String orderStatus;
   final String? elderName;
   final List<UserOrderDetail> orderDetails;
+  final String? streetAddress;
+  final String? wardName;
+  final String? districtName;
+  final String? provinceName;
+  final String? shippingCode;
+  final double? shippingFee;
+  final String? paymentMethod;
 
   UserOrderData({
     required this.id,
@@ -34,6 +41,13 @@ class UserOrderData {
     required this.orderStatus,
     required this.elderName,
     required this.orderDetails,
+    this.streetAddress,
+    this.wardName,
+    this.districtName,
+    this.provinceName,
+    this.shippingCode,
+    this.shippingFee,
+    this.paymentMethod
   });
 
   factory UserOrderData.fromJson(Map<String, dynamic> json) =>
@@ -118,11 +132,13 @@ class UserOrderDetail {
   final String productName;
   final double price;
   final int quantity;
+  final double? discount; // Discount percentage (0-100)
 
   UserOrderDetail({
     required this.productName,
     required this.price,
     required this.quantity,
+    this.discount,
   });
 
   factory UserOrderDetail.fromJson(Map<String, dynamic> json) =>

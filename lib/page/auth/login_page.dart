@@ -1,3 +1,6 @@
+import 'dart:developer';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,15 +19,21 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(
-    text: 'silvercart@gmail.com',
+    text: '',
   );
-  final _passwordController = TextEditingController(text: '123456');
+  final _passwordController = TextEditingController(text: '');
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   late final AuthService _authService;
+    final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  String? _fcmToken;
 
   @override
   void initState() {
+     _firebaseMessaging.getToken().then((token) {
+      log('FCM Token: $token');
+      _fcmToken = token;
+    });
     super.initState();
     _authService = getIt<AuthService>();
   }
@@ -52,6 +61,7 @@ class _LoginPageState extends State<LoginPage> {
       final result = await _authService.signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
+        _fcmToken ?? '',
       );
 
       if (mounted) {

@@ -5,7 +5,6 @@ import 'package:silvercart/injection.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/user_me_response.dart';
-import '../support/support_chat_page.dart';
 
 class GuardianSettingsPage extends StatefulWidget {
   const GuardianSettingsPage({super.key});
@@ -318,9 +317,9 @@ class _GuardianSettingsPageState extends State<GuardianSettingsPage> {
               title: 'Liên hệ hỗ trợ',
               subtitle: 'Chat với đội ngũ hỗ trợ',
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SupportChatPage()),
-                );
+                // Navigator.of(context).push(
+                //   MaterialPageRoute(builder: (context) => const SupportChatPage()),
+                // );
               },
             ),
             _buildSettingsItem(

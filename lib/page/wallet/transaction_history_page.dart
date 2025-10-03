@@ -574,7 +574,7 @@ class _TransactionHistoryPageState extends State<TransactionHistoryPage>
                       ),
                       SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
                       Text(
-                        'ID: ${transaction.orderId.substring(0, 8)}...',
+                        'ID: ${transaction.orderId != null ? '${transaction.orderId?.substring(0, 8)}...' : 'N/A'}',
                         style: ResponsiveHelper.responsiveTextStyle(
                           context: context,
                           baseSize: 12,

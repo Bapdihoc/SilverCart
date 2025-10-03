@@ -1,6 +1,6 @@
 import 'package:silvercart/core/models/base_response.dart';
-import 'package:silvercart/models/creating_elder_request.dart';
 import 'package:silvercart/models/elder_order_response.dart';
+import 'package:silvercart/models/elder_budget_statistic_response.dart';
 import 'package:silvercart/models/order_response.dart';
 import 'package:silvercart/models/create_order_request.dart';
 import 'package:silvercart/models/create_order_response.dart';
@@ -141,5 +141,47 @@ class OrderRespositoryMock implements OrderRespository {
  @override
   Future<BaseResponse<ElderOrderResponse>> getOrdersByElder() async {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<BaseResponse<ElderBudgetStatisticResponse>> getElderBudgetStatistic(
+    String customerId, 
+    String fromDate, 
+    String toDate,
+  ) async {
+    // Simulate API delay
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    return BaseResponse.success(
+      data: ElderBudgetStatisticResponse(
+        message: 'Get elder budget statistic successfully',
+        data: [
+          // Bản thân (elderId và elderName = null)
+          ElderBudgetData(
+            elderId: null,
+            elderName: null,
+            totalSpent: 1003860,
+            limitSpent: null,
+            orderCount: 3,
+          ),
+          // Người thân
+          ElderBudgetData(
+            elderId: 'ea2704dd-dc6d-4eb0-bc85-8d2b85ecf82b',
+            elderName: 'NGUYEN Elder (Ba 2)',
+            totalSpent: 366100,
+            limitSpent: 10000000,
+            orderCount: 1,
+          ),
+          // Thêm người thân khác để test
+          ElderBudgetData(
+            elderId: 'bb1234dd-dc6d-4eb0-bc85-8d2b85ecf82b',
+            elderName: 'TRAN Elder (Ông 3)',
+            totalSpent: 8500000,
+            limitSpent: 5000000, // Over budget
+            orderCount: 5,
+          ),
+        ],
+      ),
+    );
   }
 }

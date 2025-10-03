@@ -55,6 +55,9 @@ abstract class AuthApiService {
   @POST('/api/Auth/VerifyUser')
   Future<void> verifyOTP(@Query('otpCode') String otpCode);
 
+  @POST('/api/User/QrLogin')
+  Future<void> qrLogin(@Query('token') String token, @Query('deviceId') String deviceId);
+
   @GET('/api/User/GetDetail')
   Future<UserDetailResponse> getUserDetail(@Query('id') String id);
 

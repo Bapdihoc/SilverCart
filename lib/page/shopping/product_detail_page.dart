@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:silvercart/page/shopping/shopping_cart_page.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:silvercart/page/shopping/guardian_shopping_cart_page.dart';
 import '../../core/constants/app_colors.dart';
 
 import '../../core/utils/responsive_helper.dart';
@@ -318,7 +319,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   void dispose() {
     _animationController.dispose();
     _overlayEntry?.remove();
-    _speechService.dispose();
+    _speechService.cleanupForPage(); // Don't dispose singleton service
     super.dispose();
   }
 
@@ -588,13 +589,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         },
         onListeningComplete: () {
           log('✅ [ProductDetailPage] Speech recognition completed');
-          // Only stop listening if there was an error or completion
-          // For successful recognition, keep listening for more commands
-          if (!_isListening) {
-            setState(() {
-              _isListening = false;
-            });
-          }
+          // Always update UI state when listening completes
+          setState(() {
+            _isListening = false;
+          });
         },
       );
       log('🎤 [ProductDetailPage] Speech recognition started');
@@ -602,7 +600,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       // Add timeout to prevent mic from hanging indefinitely
       // After 30 seconds, if no command detected, stop listening
       Future.delayed(const Duration(seconds: 30), () {
-        if (_isListening) {
+        if (_isListening && mounted) {
           log('⏰ [Voice] Timeout reached, stopping listening');
           _speechService.stopListening();
           setState(() {
@@ -804,7 +802,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 ResponsiveHelper.getBorderRadius(context),
               ),
               boxShadow: [
-                BoxShadow(
+                BoxShadow( 
                   color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
@@ -903,7 +901,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         ],
       ),
       bottomNavigationBar: _buildBottomBar(),
-      floatingActionButton: _isSpeechEnabled ? _buildVoiceAssistantFAB() : null,
+      floatingActionButton: 
+      _buildVoiceAssistantFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -1351,6 +1350,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     return Container(
       margin: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
       padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(
@@ -1435,39 +1435,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               color: AppColors.grey,
             ),
           ),
-          SizedBox(height: ResponsiveHelper.getSpacing(context)),
-          _buildStyleSelection(),
-          SizedBox(height: ResponsiveHelper.getSpacing(context)),
-          // _buildVariantSelection(),
-          SizedBox(height: ResponsiveHelper.getSpacing(context)),
-
-          Row(
-            children: [
-              Icon(
-                Icons.star,
-                size: ResponsiveHelper.getIconSize(context, 16),
-                color: Colors.amber,
-              ),
-              SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
-              Text(
-                '4.5', // TODO: Get from API
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
-              ),
-              Text(
-                ' (0 đánh giá)', // TODO: Get from API
-                style: ResponsiveHelper.responsiveTextStyle(
-                  context: context,
-                  baseSize: 14,
-                  color: AppColors.grey,
-                ),
-              ),
-              const Spacer(),
-              Container(
+           Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: ResponsiveHelper.getSpacing(context),
                   vertical: ResponsiveHelper.getSpacing(context) / 2,
@@ -1494,17 +1462,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ),
                 ),
               ),
-            ],
-          ),
           SizedBox(height: ResponsiveHelper.getSpacing(context)),
-          Text(
-            'ID: ${_productDetail!.id}',
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 12,
-              color: AppColors.grey,
-            ),
-          ),
+          _buildStyleSelection(),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+          // _buildVariantSelection(),
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+
+         
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
+
         ],
       ),
     );
@@ -1947,13 +1913,62 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          Text(
-            _productDetail!.description,
-            style: ResponsiveHelper.responsiveTextStyle(
-              context: context,
-              baseSize: 16,
-              color: AppColors.text,
-            ),
+          Html(
+            data: _productDetail!.description,
+            style: {
+              "body": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 16)),
+                color: AppColors.text,
+                margin: Margins.zero,
+                padding: HtmlPaddings.zero,
+              ),
+              "p": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 16)),
+                color: AppColors.text,
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "h1": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 20)),
+                color: AppColors.text,
+                fontWeight: FontWeight.bold,
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "h2": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 18)),
+                color: AppColors.text,
+                fontWeight: FontWeight.bold,
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "h3": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 16)),
+                color: AppColors.text,
+                fontWeight: FontWeight.bold,
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "ul": Style(
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "ol": Style(
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+              ),
+              "li": Style(
+                fontSize: FontSize(ResponsiveHelper.getFontSize(context, 16)),
+                color: AppColors.text,
+                margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context) / 2),
+              ),
+              "strong": Style(
+                fontWeight: FontWeight.bold,
+              ),
+              "b": Style(
+                fontWeight: FontWeight.bold,
+              ),
+              "em": Style(
+                fontStyle: FontStyle.italic,
+              ),
+              "i": Style(
+                fontStyle: FontStyle.italic,
+              ),
+            },
           ),
         ],
       ),
@@ -1990,7 +2005,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
             ),
           ),
           SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-          _buildSpecRow('Thương hiệu', _productDetail!.brand),
+         
+              _buildSpecRow('Thương hiệu', _productDetail!.brand),
+           
+         
+          SizedBox(height: ResponsiveHelper.getSpacing(context)),
           _buildSpecRow('Trọng lượng', '${_productDetail!.weight}g'),
           _buildSpecRow('Chiều cao', '${_productDetail!.height}cm'),
           _buildSpecRow('Chiều dài', '${_productDetail!.length}cm'),

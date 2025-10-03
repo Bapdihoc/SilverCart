@@ -4,6 +4,8 @@ import 'package:injectable/injectable.dart';
 import 'package:retrofit/http.dart';
 import 'package:silvercart/models/wallet_response.dart';
 import 'package:silvercart/models/create_order_response.dart';
+import 'package:silvercart/models/withdrawal_request.dart';
+import 'package:silvercart/models/withdrawal_response.dart';
 
 part 'wallet_api_service.g.dart';
 class ParseErrorLogger {
@@ -30,4 +32,7 @@ abstract class WalletApiService {
 
   @POST('/api/Wallet/TopUpByVnPay')
   Future<CreateOrderResponse> topUpByVnPay(@Body() Map<String, dynamic> body);
+
+  @POST('/api/WithdrawRequest')
+  Future<WithdrawalResponse> requestWithdrawal(@Body() WithdrawalRequest request);
 }

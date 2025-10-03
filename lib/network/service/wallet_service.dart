@@ -2,6 +2,8 @@ import 'package:injectable/injectable.dart';
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/wallet_response.dart';
 import 'package:silvercart/models/create_order_response.dart';
+import 'package:silvercart/models/withdrawal_request.dart';
+import 'package:silvercart/models/withdrawal_response.dart';
 import 'package:silvercart/network/repositories/wallet/wallet_repository.dart';
 
 @LazySingleton()
@@ -15,5 +17,9 @@ class WalletService {
 
   Future<BaseResponse<CreateOrderResponse>> topUpByVnPay({required String userId, required int amount}) async {
     return _repo.topUpByVnPay(userId: userId, amount: amount);
+  }
+
+  Future<BaseResponse<WithdrawalResponse>> requestWithdrawal(WithdrawalRequest request) async {
+    return _repo.requestWithdrawal(request);
   }
 }

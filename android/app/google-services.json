@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "652063835895",
+    "project_id": "testing-7e665",
+    "storage_bucket": "testing-7e665.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:652063835895:android:de6253c03fe2475058b5f2",
+        "android_client_info": {
+          "package_name": "com.example.silvercart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwS3owo60jhPvWwI4m-uV71Fgzdq99ibc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,6 +2,8 @@ import 'package:injectable/injectable.dart';
 import 'package:silvercart/models/create_order_response.dart';
 import 'package:silvercart/core/models/base_response.dart';
 import 'package:silvercart/models/wallet_response.dart';
+import 'package:silvercart/models/withdrawal_request.dart';
+import 'package:silvercart/models/withdrawal_response.dart';
 import 'wallet_repository.dart';
 
 @Environment('dev')
@@ -30,5 +32,11 @@ class WalletRepositoryMock implements WalletRepository {
         data: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?mock=true',
       ),
     );
+  }
+
+  @override
+  Future<BaseResponse<WithdrawalResponse>> requestWithdrawal(WithdrawalRequest request) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return BaseResponse.success(data: WithdrawalResponse(message: 'Withdrawal request successful', data: null));
   }
 }

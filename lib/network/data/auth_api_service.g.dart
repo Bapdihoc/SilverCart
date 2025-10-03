@@ -205,6 +205,28 @@ class _AuthApiService implements AuthApiService {
   }
 
   @override
+  Future<void> qrLogin(String token, String deviceId) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'token': token,
+      r'deviceId': deviceId,
+    };
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<void>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/api/User/QrLogin',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    await _dio.fetch<void>(_options);
+  }
+
+  @override
   Future<UserDetailResponse> getUserDetail(String id) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'id': id};

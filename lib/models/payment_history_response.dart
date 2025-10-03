@@ -44,7 +44,7 @@ class PaymentHistoryItem {
   final String paymentMenthod; // Note: API has typo "Menthod" instead of "Method"
   final int paymentStatus;
   final DateTime creationDate;
-  final String orderId;
+  final String? orderId;
 
   PaymentHistoryItem({
     required this.id,

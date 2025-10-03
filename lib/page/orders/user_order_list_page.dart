@@ -26,8 +26,16 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
     {'status': null, 'label': 'Tất cả', 'icon': Icons.list_alt_rounded},
     {'status': 'Created', 'label': 'Đã tạo', 'icon': Icons.receipt_rounded},
     {'status': 'Paid', 'label': 'Đã thanh toán', 'icon': Icons.payment_rounded},
-    {'status': 'PendingChecked', 'label': 'Đang giao', 'icon': Icons.local_shipping_rounded},
-    {'status': 'PendingConfirm', 'label': 'Hoàn thành', 'icon': Icons.check_circle_rounded},
+    {
+      'status': 'PendingChecked',
+      'label': 'Đang giao',
+      'icon': Icons.local_shipping_rounded,
+    },
+    {
+      'status': 'PendingConfirm',
+      'label': 'Hoàn thành',
+      'icon': Icons.check_circle_rounded,
+    },
     {'status': 'Canceled', 'label': 'Đã hủy', 'icon': Icons.cancel_rounded},
     {'status': 'Fail', 'label': 'Thất bại', 'icon': Icons.error_rounded},
   ];
@@ -43,10 +51,12 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
     if (_selectedStatus == null) {
       _filteredOrders = List.from(_orders);
     } else {
-      _filteredOrders = _orders.where((order) => order.orderStatus == _selectedStatus).toList();
+      _filteredOrders =
+          _orders
+              .where((order) => order.orderStatus == _selectedStatus)
+              .toList();
     }
     _filteredOrders = _filteredOrders.reversed.toList();
-
   }
 
   Future<void> _loadOrders() async {
@@ -57,7 +67,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
 
     try {
       final result = await _orderService.getUserOrders();
-      
+
       if (result.isSuccess && result.data != null) {
         setState(() {
           _orders = result.data!.data;
@@ -130,19 +140,24 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+              icon: Icon(
+                Icons.refresh_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
               onPressed: _loadOrders,
             ),
           ),
         ],
       ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : _errorMessage != null
+      body:
+          _isLoading
+              ? _buildLoadingState()
+              : _errorMessage != null
               ? _buildErrorState()
               : _orders.isEmpty
-                  ? _buildEmptyState()
-                  : _buildOrderList(),
+              ? _buildEmptyState()
+              : _buildOrderList(),
     );
   }
 
@@ -417,7 +432,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
               ],
             ),
             child: ElevatedButton(
-                onPressed: () {
+              onPressed: () {
                 Navigator.of(context).pop(); // Go back to shopping
               },
               style: ElevatedButton.styleFrom(
@@ -470,9 +485,11 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
         itemBuilder: (context, index) {
           final filter = _orderStatusFilters[index];
           final isSelected = _selectedStatus == filter['status'];
-          
+
           return Padding(
-            padding: EdgeInsets.only(right: ResponsiveHelper.getSpacing(context)),
+            padding: EdgeInsets.only(
+              right: ResponsiveHelper.getSpacing(context),
+            ),
             child: FilterChip(
               selected: isSelected,
               showCheckmark: false,
@@ -492,7 +509,9 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
               ),
               backgroundColor: Colors.white,
               selectedColor: AppColors.primary,
-              padding: EdgeInsets.symmetric(horizontal: ResponsiveHelper.getSpacing(context)),
+              padding: EdgeInsets.symmetric(
+                horizontal: ResponsiveHelper.getSpacing(context),
+              ),
               onSelected: (bool selected) {
                 setState(() {
                   _selectedStatus = selected ? filter['status'] : null;
@@ -514,15 +533,18 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
         children: [
           _buildFilterChips(),
           Expanded(
-            child: _filteredOrders.isEmpty
-                ? _buildEmptyFilterState()
-                : ListView.builder(
-                    padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-                    itemCount: _filteredOrders.length,
-                    itemBuilder: (context, index) {
-                      return _buildOrderCard(_filteredOrders[index]);
-                    },
-                  ),
+            child:
+                _filteredOrders.isEmpty
+                    ? _buildEmptyFilterState()
+                    : ListView.builder(
+                      padding: EdgeInsets.all(
+                        ResponsiveHelper.getLargeSpacing(context),
+                      ),
+                      itemCount: _filteredOrders.length,
+                      itemBuilder: (context, index) {
+                        return _buildOrderCard(_filteredOrders[index]);
+                      },
+                    ),
           ),
         ],
       ),
@@ -531,7 +553,9 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
 
   Widget _buildOrderCard(UserOrderData order) {
     return Container(
-      margin: EdgeInsets.only(bottom: ResponsiveHelper.getLargeSpacing(context)),
+      margin: EdgeInsets.only(
+        bottom: ResponsiveHelper.getLargeSpacing(context),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -542,30 +566,29 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (context) => OrderDetailPage(order: order),
-              ),
-            ).then((needRefresh) {
-              // Chỉ refresh khi có thay đổi (hủy đơn thành công)
-              if (needRefresh == true) {
-                _loadOrders();
-              }
-            });
+            Navigator.of(context)
+                .push<bool>(
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailPage(order: order),
+                  ),
+                )
+                .then((needRefresh) {
+                  // Chỉ refresh khi có thay đổi (hủy đơn thành công)
+                  if (needRefresh == true) {
+                    _loadOrders();
+                  }
+                });
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-                    child: Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Compact header with order ID and status
@@ -584,7 +607,8 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                               color: AppColors.text,
                             ),
                           ),
-                          if (order.elderName != null && order.elderName!.isNotEmpty) ...[
+                          if (order.elderName != null &&
+                              order.elderName!.isNotEmpty) ...[
                             SizedBox(height: 4),
                             Row(
                               children: [
@@ -612,21 +636,32 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                         ],
                       ),
                     ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(color:order.paymentMethod == 'VNPay'? Colors.blue: Colors.amber, borderRadius: BorderRadius.circular(16)),
+                      child: Text('${order.paymentMethod?.toUpperCase()}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),)),
+                    SizedBox(width: 15),
+
                     _buildCompactStatusChip(order),
+                    // \
+                    // Column(
+                    //   children: [
+                    //     // Text('${order.paymentMethod}')
+                    //   ],
+                    // ),
                   ],
                 ),
-                
+
                 SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-                
+
                 // Compact product summary
                 Container(
-                  padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
+                  padding: EdgeInsets.all(
+                    ResponsiveHelper.getLargeSpacing(context),
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFF8F9FA),
-                        Colors.white,
-                      ],
+                      colors: [const Color(0xFFF8F9FA), Colors.white],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -644,7 +679,8 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: ResponsiveHelper.getSpacing(context),
-                              vertical: ResponsiveHelper.getSpacing(context) / 2,
+                              vertical:
+                                  ResponsiveHelper.getSpacing(context) / 2,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
@@ -683,49 +719,60 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                           ),
                         ],
                       ),
-                      
+
                       if (order.orderDetails.isNotEmpty) ...[
                         SizedBox(height: ResponsiveHelper.getSpacing(context)),
                         Divider(color: Colors.grey.withOpacity(0.2)),
                         SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                        
+
                         // Show first 2 products
-                        ...order.orderDetails.take(2).map((detail) => 
-                          Padding(
-                            padding: EdgeInsets.only(bottom: ResponsiveHelper.getSpacing(context) / 2),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    detail.productName,
-                                    style: ResponsiveHelper.responsiveTextStyle(
-                                      context: context,
-                                      baseSize: 13,
-                                      color: AppColors.text,
-                                      fontWeight: FontWeight.w500,
+                        ...order.orderDetails
+                            .take(2)
+                            .map(
+                              (detail) => Padding(
+                                padding: EdgeInsets.only(
+                                  bottom:
+                                      ResponsiveHelper.getSpacing(context) / 2,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        detail.productName,
+                                        style:
+                                            ResponsiveHelper.responsiveTextStyle(
+                                              context: context,
+                                              baseSize: 13,
+                                              color: AppColors.text,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                    Text(
+                                      'x${detail.quantity}',
+                                      style:
+                                          ResponsiveHelper.responsiveTextStyle(
+                                            context: context,
+                                            baseSize: 12,
+                                            color: AppColors.grey,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'x${detail.quantity}',
-                                  style: ResponsiveHelper.responsiveTextStyle(
-                                    context: context,
-                                    baseSize: 12,
-                                    color: AppColors.grey,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).toList(),
-                        
+                              ),
+                            )
+                            .toList(),
+
                         // Show more indicator if needed
                         if (order.orderDetails.length > 2)
                           Container(
-                            padding: EdgeInsets.symmetric(vertical: ResponsiveHelper.getSpacing(context) / 2),
+                            padding: EdgeInsets.symmetric(
+                              vertical:
+                                  ResponsiveHelper.getSpacing(context) / 2,
+                            ),
                             child: Row(
                               children: [
                                 Icon(
@@ -755,12 +802,14 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                     ],
                   ),
                 ),
-                
+
                 // Note section if exists
                 if (order.note.isNotEmpty) ...[
                   SizedBox(height: ResponsiveHelper.getSpacing(context)),
                   Container(
-                    padding: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
+                    padding: EdgeInsets.all(
+                      ResponsiveHelper.getSpacing(context),
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.warning.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -776,7 +825,9 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                           size: 14,
                           color: AppColors.warning,
                         ),
-                        SizedBox(width: ResponsiveHelper.getSpacing(context) / 2),
+                        SizedBox(
+                          width: ResponsiveHelper.getSpacing(context) / 2,
+                        ),
                         Expanded(
                           child: Text(
                             order.note,
@@ -794,8 +845,8 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                     ),
                   ),
                 ],
-          ],
-        ),
+              ],
+            ),
           ),
         ),
       ),
@@ -805,25 +856,25 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
   Widget _buildCompactStatusChip(UserOrderData order) {
     Color chipColor;
     Color textColor;
-    
+
     switch (order.orderStatus) {
-      case 0: // Created
+      case 'Created': // Created
         chipColor = Colors.blue.withOpacity(0.1);
         textColor = Colors.blue;
         break;
-      case 1: // Paid
+      case 'Paid': // Paid
         chipColor = Colors.orange.withOpacity(0.1);
         textColor = Colors.orange;
         break;
-      case 2: // Shipping
+      case 'Shipping': // Shipping
         chipColor = Colors.purple.withOpacity(0.1);
         textColor = Colors.purple;
         break;
-      case 3: // Completed
+      case 'Completed': // Completed
         chipColor = AppColors.success.withOpacity(0.1);
         textColor = AppColors.success;
         break;
-      case 4: // Failed
+      case 'Fail': // Failed
         chipColor = AppColors.error.withOpacity(0.1);
         textColor = AppColors.error;
         break;
@@ -831,7 +882,7 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
         chipColor = AppColors.grey.withOpacity(0.1);
         textColor = AppColors.grey;
     }
-    
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: ResponsiveHelper.getSpacing(context),
@@ -840,13 +891,10 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
       decoration: BoxDecoration(
         color: chipColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: textColor.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
       ),
       child: Text(
-        order.orderStatusText,
+        '${order.orderStatusText}',
         style: ResponsiveHelper.responsiveTextStyle(
           context: context,
           baseSize: 12,
@@ -856,6 +904,4 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
       ),
     );
   }
-
-
 }

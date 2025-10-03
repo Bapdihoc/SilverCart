@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_speech/speech_client_authenticator.dart';
-import 'package:google_speech/speech_to_text.dart';
 import 'package:google_speech/google_speech.dart';
 import 'package:google_speech/generated/google/cloud/speech/v1/cloud_speech.pbgrpc.dart' as grpc;
 import 'package:permission_handler/permission_handler.dart';
@@ -24,23 +21,14 @@ class SpeechService {
   static const MethodChannel _microphoneChannel = MethodChannel('microphone_channel');
   static const EventChannel _audioDataChannel = EventChannel('audio_data_channel');
   
-  // Audio simulation for testing (remove in production)
-  Timer? _audioSimulationTimer;
-  bool _isSimulatingAudio = false;
   
-  // Manual mode for testing
-  bool _isManualMode = false; // Set to false for real speech recognition
-  Timer? _manualDetectionTimer;
   
   // Real-time audio processing
-  StreamController<List<int>>? _realAudioStream;
   bool _isRealAudioActive = false;
   
-  // Audio data subscription with correct type
+  // Audio data subscription
   StreamSubscription<dynamic>? _audioDataSubscription;
   
-  // Disable simulation mode completely
-  bool _enableSimulation = false; // Set to false to disable all simulation
 
   // Enhanced command detection
   final Map<String, List<String>> _commandPatterns = {
@@ -138,16 +126,6 @@ class SpeechService {
       await _flutterTts!.setPitch(1.0);
       log('✅ [Speech] TTS initialized successfully');
 
-      // Initialize microphone recorder
-      log('🎤 [Speech] Initializing microphone recorder...');
-      
-      // Check microphone permission
-      if (!await checkMicrophonePermission()) {
-        log('❌ [Speech] Microphone permission not granted');
-        return;
-      }
-      log('✅ [Speech] Microphone recorder initialized');
-
       // Initialize Speech Recognition
       log('🎯 [Speech] Initializing Speech Recognition...');
       await _initializeSpeechRecognition();
@@ -157,6 +135,7 @@ class SpeechService {
     } catch (e) {
       log('❌ [Speech] Error during initialization: $e');
       log('❌ [Speech] Stack trace: ${StackTrace.current}');
+      // Don't throw error, just log it - TTS can still work without speech recognition
     }
   }
 
@@ -165,49 +144,32 @@ class SpeechService {
     log('🔧 [Speech] _initializeSpeechRecognition() called');
     
     try {
-      // Check microphone permission first
-      log('🔍 [Speech] Checking microphone permission...');
-      if (!await checkMicrophonePermission()) {
-        log('❌ [Speech] Microphone permission not granted');
+      log('📁 [Speech] Loading service account from assets...');
+      
+      // Load service account from assets
+      final serviceAccountJson = await rootBundle.loadString('assets/service_account.json');
+      log('📄 [Speech] Service account JSON loaded, length: ${serviceAccountJson.length}');
+      
+      // Check if service account is properly configured
+      if (serviceAccountJson.contains('YOUR_PRIVATE_KEY_HERE') || 
+          serviceAccountJson.contains('your_private_key_id')) {
+        log('⚠️ [Speech] Service account appears to be template - speech recognition disabled');
+        _speechToText = null;
         return;
       }
-      log('✅ [Speech] Microphone permission granted');
-
-      // Create speech client using service account (recommended for production)
-      try {
-        log('📁 [Speech] Loading service account from assets...');
-        
-        // Option 1: Use service account from assets (recommended)
-        final serviceAccountJson = await rootBundle.loadString('assets/service_account.json');
-        log('📄 [Speech] Service account JSON loaded, length: ${serviceAccountJson.length}');
-        
-        // Check if service account is properly configured
-        if (serviceAccountJson.contains('YOUR_PRIVATE_KEY_HERE') || 
-            serviceAccountJson.contains('your_private_key_id')) {
-          log('⚠️ [Speech] Service account appears to be template - using fallback mode');
-          throw Exception('Service account not properly configured');
-        }
-        
-        final serviceAccount = ServiceAccount.fromString(serviceAccountJson);
-        log('✅ [Speech] Service account parsed successfully');
-        
-        _speechToText = SpeechToText.viaServiceAccount(serviceAccount);
-        log('✅ [Speech] SpeechToText client created with service account');
-        
-        log('🎉 [Speech] Speech recognition initialized successfully with service account');
-      } catch (e) {
-        log('❌ [Speech] Error creating speech client: $e');
-        log('❌ [Speech] Stack trace: ${StackTrace.current}');
-        log('Please check assets/service_account.json file - it should contain real credentials');
-        
-        // Fallback: Enable simulation mode for testing
-        log('🔄 [Speech] Enabling simulation mode for testing...');
-        _enableSimulation = true;
-        _speechToText = null;
-      }
+      
+      final serviceAccount = ServiceAccount.fromString(serviceAccountJson);
+      log('✅ [Speech] Service account parsed successfully');
+      
+      _speechToText = SpeechToText.viaServiceAccount(serviceAccount);
+      log('🎉 [Speech] Speech recognition initialized successfully');
+      
     } catch (e) {
       log('❌ [Speech] Error initializing speech recognition: $e');
-      log('❌ [Speech] Stack trace: ${StackTrace.current}');
+      log('Please check assets/service_account.json file - it should contain real credentials');
+      
+      // Set speechToText to null if initialization fails
+      _speechToText = null;
     }
   }
 
@@ -225,15 +187,16 @@ class SpeechService {
       return;
     }
 
+    // Auto-stop if already listening
     if (_isListening) {
-      log('⚠️ [Speech] Already listening, cannot start again');
-      onError('Already listening');
-      return;
+      log('⚠️ [Speech] Already listening, stopping previous session...');
+      forceStopListening();
+      // Wait a bit for cleanup
+      await Future.delayed(Duration(milliseconds: 500));
     }
 
     try {
       log('🔍 [Speech] Checking microphone permission...');
-      // Check permission again
       if (!await checkMicrophonePermission()) {
         log('❌ [Speech] Microphone permission denied');
         onError('Microphone permission required');
@@ -244,27 +207,25 @@ class SpeechService {
       _setListeningState(true);
       log('🎯 [Speech] Set listening state to true');
 
-      // Check if we have real Google Speech API client
-      if (_speechToText != null && !_enableSimulation) {
+      // Use real speech recognition with command detection
+      if (_speechToText != null) {
         await _startRealSpeechRecognition(onResult, onError, onListeningComplete);
-      } else if (_enableSimulation) {
-        // Use simulation mode for testing (disabled by default)
-        await _startSimulatedSpeechRecognition(onResult, onError, onListeningComplete);
       } else {
-        // No Google Speech API and simulation disabled
         onError('Speech recognition not available. Please check Google Cloud configuration.');
         _setListeningState(false);
       }
 
     } catch (e) {
       log('❌ [Speech] Error starting speech recognition: $e');
-      log('❌ [Speech] Stack trace: ${StackTrace.current}');
       onError('Lỗi khởi động nhận diện giọng nói: $e');
       _setListeningState(false);
     }
   }
 
-  // Start real Google Speech API recognition
+
+
+
+  // Start real Google Speech API recognition (with command detection)
   Future<void> _startRealSpeechRecognition(
     Function(String) onResult,
     Function(String) onError,
@@ -317,7 +278,16 @@ class SpeechService {
             final commandType = _detectCommand(transcript);
             if (commandType != 'unknown') {
               log('🎉 [Speech] Valid command detected: $commandType from "$transcript"');
+              
+              // Stop listening immediately when command is detected
+              log('🛑 [Speech] Stopping listening after command detection...');
+              stopListening();
+              
+              // Execute the command
               onResult(transcript);
+              
+              // Call completion callback
+              onListeningComplete();
               return; // Stop processing alternatives
             }
           }
@@ -455,136 +425,8 @@ class SpeechService {
         .toLowerCase();
   }
 
-  // Start simulated speech recognition for testing
-  Future<void> _startSimulatedSpeechRecognition(
-    Function(String) onResult,
-    Function(String) onError,
-    VoidCallback onListeningComplete,
-  ) async {
-    log('🎭 [Speech] Starting simulated speech recognition...');
-    
-    if (_isManualMode) {
-      log('🎮 [Speech] Manual mode enabled - waiting for manual trigger');
-      return; // Don't auto-detect in manual mode
-    }
-    
-    // Simulate speech recognition with predefined commands
-    final commands = [
-      'Tăng số lượng',
-      'Giảm số lượng', 
-      'Thêm vào giỏ',
-      'Mua ngay',
-      'Đọc thông tin',
-      'Đọc giá',
-      'Hướng dẫn',
-    ];
-    
-    // Simulate detection after 3 seconds (only once)
-    Future.delayed(const Duration(seconds: 3), () {
-      if (_isListening) {
-        final randomCommand = commands[DateTime.now().millisecondsSinceEpoch % commands.length];
-        log('🎭 [Speech] Simulated command detected: "$randomCommand"');
-        onResult(randomCommand);
-        
-        // Don't continue automatically - wait for user to speak again
-        log('🎭 [Speech] Simulation completed, waiting for real input...');
-      }
-    });
-    
-    log('🎭 [Speech] Simulated speech recognition started (will detect once after 3s)');
-  }
-
-  // Manual trigger for testing (call this when you want to simulate detection)
-  void triggerManualDetection(Function(String) onResult) {
-    if (!_isListening || !_isManualMode) return;
-    
-    log('🎮 [Speech] Manual detection triggered');
-    
-    final commands = [
-      'Tăng số lượng',
-      'Giảm số lượng', 
-      'Thêm vào giỏ',
-      'Mua ngay',
-      'Đọc thông tin',
-      'Đọc giá',
-      'Hướng dẫn',
-    ];
-    
-    final randomCommand = commands[DateTime.now().millisecondsSinceEpoch % commands.length];
-    log('🎭 [Speech] Manual command detected: "$randomCommand"');
-    onResult(randomCommand);
-  }
-
-  // Toggle manual mode
-  void toggleManualMode() {
-    _isManualMode = !_isManualMode;
-    log('🎮 [Speech] Manual mode ${_isManualMode ? 'enabled' : 'disabled'}');
-  }
-
-  // Get current mode
-  bool get isManualMode => _isManualMode;
-  
-  // Toggle simulation mode (for development/testing only)
-  void toggleSimulationMode() {
-    _enableSimulation = !_enableSimulation;
-    log('🎭 [Speech] Simulation mode ${_enableSimulation ? 'enabled' : 'disabled'}');
-  }
-  
-  // Get simulation mode status
-  bool get isSimulationEnabled => _enableSimulation;
-
-  // Start audio simulation for testing
-  void _startAudioSimulation(StreamController<List<int>> audioStream) {
-    if (_isSimulatingAudio) return;
-    
-    _isSimulatingAudio = true;
-    log('🎵 [Speech] Starting audio simulation...');
-    
-    // Simulate audio data every 100ms
-    _audioSimulationTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_isListening || !_isSimulatingAudio) {
-        timer.cancel();
-        _isSimulatingAudio = false;
-        return;
-      }
-      
-      // Generate simulated audio data (16-bit PCM, 16kHz)
-      final audioData = _generateSimulatedAudioData();
-      audioStream.add(audioData);
-      
-      // Log only occasionally to avoid spam
-      if (DateTime.now().millisecondsSinceEpoch % 1000 < 100) {
-        log('🎵 [Speech] Sending simulated audio data: ${audioData.length} bytes');
-      }
-    });
-  }
-
-  // Generate simulated audio data
-  List<int> _generateSimulatedAudioData() {
-    // Generate 800 samples (50ms at 16kHz) of simulated audio
-    final samples = <int>[];
-    final sampleCount = 800;
-    
-    for (int i = 0; i < sampleCount; i++) {
-      // Generate a simple sine wave pattern
-      final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
-      final frequency = 440.0; // A4 note
-      final amplitude = 0.3; // Reduced amplitude
-      
-      final sample = (amplitude * 32767 * (0.5 + 0.5 * math.sin(time * frequency))).round();
-      
-      // Convert to 16-bit little-endian
-      samples.add(sample & 0xFF);
-      samples.add((sample >> 8) & 0xFF);
-    }
-    
-    return samples;
-  }
-
   // Stop listening
   void stopListening() {
-    if (!_isListening) return;
-
     try {
       log('🛑 [Speech] Stopping speech recognition...');
       
@@ -595,16 +437,42 @@ class SpeechService {
       // Stop real microphone recording
       _stopRealMicrophoneRecording();
       
-      // Stop audio simulation (fallback)
-      _audioSimulationTimer?.cancel();
-      _isSimulatingAudio = false;
       
+      // Force reset listening state
       _setListeningState(false);
       
       log('✅ [Speech] Speech recognition stopped successfully');
       
     } catch (e) {
       log('❌ [Speech] Error stopping: $e');
+      // Force reset state even on error
+      _setListeningState(false);
+    }
+  }
+
+  // Force stop listening (for page navigation)
+  void forceStopListening() {
+    log('🚨 [Speech] Force stopping speech recognition...');
+    
+    try {
+      // Cancel all subscriptions
+      _recognitionSubscription?.cancel();
+      _recognitionSubscription = null;
+      
+      // Stop microphone
+      _stopRealMicrophoneRecording();
+      
+      
+      // Force reset all states
+      _isListening = false;
+      _isRealAudioActive = false;
+      
+      log('✅ [Speech] Force stop completed');
+    } catch (e) {
+      log('❌ [Speech] Error in force stop: $e');
+      // Reset states anyway
+      _isListening = false;
+      _isRealAudioActive = false;
     }
   }
 
@@ -694,11 +562,6 @@ class SpeechService {
     await speak(text);
   }
 
-  // Enhanced voice command processing
-  bool processVoiceCommand(String command) {
-    final commandType = _detectCommand(command);
-    return commandType != 'unknown';
-  }
 
   // Get voice command type with enhanced detection
   String getCommandType(String command) {
@@ -729,24 +592,31 @@ class SpeechService {
       // Listen to audio data stream with proper type handling
       _audioDataSubscription = _audioDataChannel.receiveBroadcastStream().listen(
         (data) {
-          if (data is List<int>) {
-            audioStream.add(data);
-            log('🎵 [Speech] Real audio data: ${data.length} bytes');
-          } else if (data is List) {
-            // Convert List<dynamic> to List<int> if needed
-            try {
+          try {
+            if (data is List<int>) {
+              audioStream.add(data);
+              // Log only occasionally to avoid spam
+              if (DateTime.now().millisecondsSinceEpoch % 2000 < 100) {
+                log('🎵 [Speech] Real audio data: ${data.length} bytes');
+              }
+            } else if (data is List) {
+              // Convert List<dynamic> to List<int> if needed
               final intList = data.cast<int>();
               audioStream.add(intList);
-              log('🎵 [Speech] Converted audio data: ${intList.length} bytes');
-            } catch (e) {
-              log('❌ [Speech] Error converting audio data: $e');
+              // Log only occasionally to avoid spam
+              if (DateTime.now().millisecondsSinceEpoch % 2000 < 100) {
+                log('🎵 [Speech] Converted audio data: ${intList.length} bytes');
+              }
+            } else {
+              log('⚠️ [Speech] Unexpected audio data type: ${data.runtimeType}');
             }
-          } else {
-            log('⚠️ [Speech] Unexpected audio data type: ${data.runtimeType}');
+          } catch (e) {
+            log('❌ [Speech] Error processing audio data: $e');
           }
         },
         onError: (error) {
           log('❌ [Speech] Error receiving audio data: $error');
+          // Don't stop the entire process for audio data errors
         },
       );
       
@@ -757,9 +627,18 @@ class SpeechService {
       log('❌ [Speech] Error starting microphone recording: $e');
       log('❌ [Speech] Stack trace: ${StackTrace.current}');
       
-      // Fallback to simulation if real recording fails
-      log('🔄 [Speech] Falling back to audio simulation...');
-      _startAudioSimulation(audioStream);
+      // Provide more specific error messages
+      String errorMessage = 'Không thể khởi động microphone';
+      if (e.toString().contains('permission')) {
+        errorMessage = 'Không có quyền truy cập microphone. Vui lòng cấp quyền trong cài đặt.';
+      } else if (e.toString().contains('busy')) {
+        errorMessage = 'Microphone đang được sử dụng bởi ứng dụng khác.';
+      } else if (e.toString().contains('hardware')) {
+        errorMessage = 'Lỗi phần cứng microphone. Vui lòng kiểm tra thiết bị.';
+      }
+      
+      // Re-throw with better error message
+      throw Exception(errorMessage);
     }
   }
 
@@ -770,52 +649,57 @@ class SpeechService {
     try {
       log('🛑 [Speech] Stopping real microphone recording...');
       
-      // Stop recording via platform channel
-      await _microphoneChannel.invokeMethod('stopRecording');
-      
-      // Cancel audio data subscription
+      // Cancel audio data subscription first
       _audioDataSubscription?.cancel();
       _audioDataSubscription = null;
+      
+      // Stop recording via platform channel
+      await _microphoneChannel.invokeMethod('stopRecording');
       
       _isRealAudioActive = false;
       log('✅ [Speech] Real microphone recording stopped');
       
     } catch (e) {
       log('❌ [Speech] Error stopping microphone recording: $e');
+      // Force reset state even if stop fails
+      _isRealAudioActive = false;
+      _audioDataSubscription?.cancel();
+      _audioDataSubscription = null;
     }
   }
 
-  // Convert real amplitude to audio data (placeholder for now)
-  List<int> _convertAmplitudeToRealAudio(dynamic amplitude) {
-    // Placeholder - will be implemented when we have real amplitude data
-    final samples = <int>[];
-    final sampleCount = 800; // 50ms at 16kHz
+
+  // Cleanup for page disposal (don't dispose singleton service)
+  void cleanupForPage() {
+    log('🧹 [Speech] Cleaning up for page disposal...');
     
-    for (int i = 0; i < sampleCount; i++) {
-      // Generate placeholder audio data
-      final sample = (math.Random().nextDouble() * 65535 - 32767).round();
-      
-      // Convert to 16-bit little-endian
-      samples.add(sample & 0xFF);
-      samples.add((sample >> 8) & 0xFF);
-    }
+    // Only stop listening, don't dispose the entire service
+    forceStopListening();
     
-    return samples;
+    // Stop TTS if speaking
+    _flutterTts?.stop();
+    
+    log('✅ [Speech] Page cleanup completed');
   }
 
-  // Cleanup
+  // Full disposal (only for app termination)
   void dispose() {
     log('🧹 [Speech] Disposing SpeechService...');
     
     _flutterTts?.stop();
     _recognitionSubscription?.cancel();
     _speechController?.close();
-    _audioSimulationTimer?.cancel();
     
     // Cleanup microphone recorder
     _stopRealMicrophoneRecording();
     _audioDataSubscription?.cancel();
     
+    // Reset all states
+    _isInitialized = false;
+    _isListening = false;
+    _isRealAudioActive = false;
+    
     log('✅ [Speech] SpeechService disposed');
   }
 }
+

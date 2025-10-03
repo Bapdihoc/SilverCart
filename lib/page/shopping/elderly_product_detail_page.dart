@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../../core/constants/app_colors.dart';
 
 import '../../core/utils/responsive_helper.dart';
@@ -139,7 +140,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
   void dispose() {
     _animationController.dispose();
     _overlayEntry?.remove();
-    _speechService.dispose();
+    _speechService.cleanupForPage(); // Don't dispose singleton service
     super.dispose();
   }
 
@@ -372,13 +373,10 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
         },
         onListeningComplete: () {
           log('✅ [ElderlyProductDetailPage] Speech recognition completed');
-          // Only stop listening if there was an error or completion
-          // For successful recognition, keep listening for more commands
-          if (!_isListening) {
-            setState(() {
-              _isListening = false;
-            });
-          }
+          // Always update UI state when listening completes
+          setState(() {
+            _isListening = false;
+          });
         },
       );
       log('🎤 [ElderlyProductDetailPage] Speech recognition started');
@@ -386,7 +384,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
       // Add timeout to prevent mic from hanging indefinitely
       // After 30 seconds, if no command detected, stop listening
       Future.delayed(const Duration(seconds: 30), () {
-        if (_isListening) {
+        if (_isListening && mounted) {
           log('⏰ [Voice] Timeout reached, stopping listening');
           _speechService.stopListening();
           setState(() {
@@ -1518,7 +1516,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
               _buildElderlyVoiceChip('Tăng số lượng'),
               _buildElderlyVoiceChip('Giảm số lượng'),
               _buildElderlyVoiceChip('Thêm vào giỏ'),
-              _buildElderlyVoiceChip('Mua ngay'),
+              // _buildElderlyVoiceChip('Mua ngay'),
               _buildElderlyVoiceChip('Đọc thông tin'),
               _buildElderlyVoiceChip('Đọc giá'),
             ],
@@ -1591,13 +1589,62 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
               color: AppColors.grey.withOpacity(0.05),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Text(
-              _productDetail!.description,
-              style: ResponsiveHelper.responsiveTextStyle(
-                context: context,
-                baseSize: 18,
-                color: AppColors.text,
-              ).copyWith(height: 1.5),
+            child: Html(
+              data: _productDetail!.description,
+              style: {
+                "body": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 18)),
+                  color: AppColors.text,
+                  margin: Margins.zero,
+                  padding: HtmlPaddings.zero,
+                ),
+                "p": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 18)),
+                  color: AppColors.text,
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "h1": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 24)),
+                  color: AppColors.text,
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "h2": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 22)),
+                  color: AppColors.text,
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "h3": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 20)),
+                  color: AppColors.text,
+                  fontWeight: FontWeight.bold,
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "ul": Style(
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "ol": Style(
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context)),
+                ),
+                "li": Style(
+                  fontSize: FontSize(ResponsiveHelper.getFontSize(context, 18)),
+                  color: AppColors.text,
+                  margin: Margins.only(bottom: ResponsiveHelper.getSpacing(context) / 2),
+                ),
+                "strong": Style(
+                  fontWeight: FontWeight.bold,
+                ),
+                "b": Style(
+                  fontWeight: FontWeight.bold,
+                ),
+                "em": Style(
+                  fontStyle: FontStyle.italic,
+                ),
+                "i": Style(
+                  fontStyle: FontStyle.italic,
+                ),
+              },
             ),
           ),
         ],
@@ -1624,7 +1671,7 @@ class _ElderlyProductDetailPageState extends State<ElderlyProductDetailPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '⚙️ Thông số kỹ thuật',
+            'Thông số',
             style: ResponsiveHelper.responsiveTextStyle(
               context: context,
               baseSize: 24,

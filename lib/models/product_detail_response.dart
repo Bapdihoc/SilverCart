@@ -20,10 +20,10 @@ class ProductDetailData {
   final String brand;
   final String description;
   final String? videoPath;
-  final String weight;
-  final String height;
-  final String length;
-  final String width;
+  final String? weight;
+  final String? height;
+  final String? length;
+  final String? width;
   final DateTime manufactureDate;
   final DateTime expirationDate;
   final List<ProductDetailCategory> categories;
@@ -36,10 +36,10 @@ class ProductDetailData {
     required this.brand,
     required this.description,
     this.videoPath,
-    required this.weight,
-    required this.height,
-    required this.length,
-    required this.width,
+    this.weight,
+    this.height,
+    this.length,
+    this.width,
     required this.manufactureDate,
     required this.expirationDate,
     required this.categories,

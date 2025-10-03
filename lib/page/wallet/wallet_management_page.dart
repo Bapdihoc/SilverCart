@@ -7,6 +7,7 @@ import '../../core/utils/currency_utils.dart';
 import '../../network/service/wallet_service.dart';
 import '../../network/service/auth_service.dart';
 import '../../injection.dart';
+import '../../models/withdrawal_request.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'transaction_history_page.dart';
 
@@ -46,14 +47,15 @@ class _WalletManagementPageState extends State<WalletManagementPage>
       'description': 'Cổng thanh toán quốc gia',
       'icon': Icons.credit_card_rounded, 
       'color': Colors.orange
-    },
-    {
-      'id': 'payos', 
-      'name': 'PayOS', 
-      'description': 'Thanh toán nhanh chóng',
-      'icon': Icons.payment_rounded, 
-      'color': Colors.blue
-    },
+    }
+    // ,
+    // {
+    //   'id': 'payos', 
+    //   'name': 'PayOS', 
+    //   'description': 'Thanh toán nhanh chóng',
+    //   'icon': Icons.payment_rounded, 
+    //   'color': Colors.blue
+    // },
   ];
 
   // API services
@@ -147,125 +149,45 @@ class _WalletManagementPageState extends State<WalletManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        primary: true,
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    _buildWalletBalanceCard(),
-                    _buildTabSection(),
-                  ],
+      appBar: AppBar(
+        title: Text('Quản lý ví'),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history, color: Colors.white, size: 20),
+            onPressed: _showTransactionHistory,
+          ),
+        ],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: CustomScrollView(
+          primary: true,
+          slivers: [
+            SliverToBoxAdapter(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    children: [
+                      _buildWalletBalanceCard(),
+                      _buildTabSection(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      pinned: true,
-      expandedHeight: 120,
-      leading: Container(
-        margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: AppColors.text, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: EdgeInsets.all(ResponsiveHelper.getSpacing(context)),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
-            onPressed: _showTransactionHistory,
-          ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white,
-                Colors.white.withOpacity(0.9),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveHelper.getLargeSpacing(context),
-                    vertical: ResponsiveHelper.getSpacing(context),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Quản lý ví',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
-                        ),
-                      ),
-                      SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
-                      Text(
-                        'Nạp tiền & Rút tiền',
-                        style: ResponsiveHelper.responsiveTextStyle(
-                          context: context,
-                          baseSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildWalletBalanceCard() {
     return Container(
@@ -661,7 +583,8 @@ class _WalletManagementPageState extends State<WalletManagementPage>
                             ),
                           ] : null,
                         ),
-                        child: Column(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
                               width: ResponsiveHelper.getIconSize(context, 50),
@@ -678,8 +601,11 @@ class _WalletManagementPageState extends State<WalletManagementPage>
                                 color: isSelected ? Colors.white : method['color'],
                               ),
                             ),
-                            SizedBox(height: ResponsiveHelper.getSpacing(context)),
-                            Text(
+                            SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                               method['name'],
                               style: ResponsiveHelper.responsiveTextStyle(
                                 context: context,
@@ -698,6 +624,8 @@ class _WalletManagementPageState extends State<WalletManagementPage>
                                 color: isSelected ? Colors.white.withOpacity(0.9) : AppColors.grey,
                               ),
                               textAlign: TextAlign.center,
+                            ),
+                              ],
                             ),
                             if (isSelected) ...[
                               SizedBox(height: ResponsiveHelper.getSpacing(context) / 2),
@@ -955,42 +883,6 @@ class _WalletManagementPageState extends State<WalletManagementPage>
             
             SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
             
-            // Warning note
-            Container(
-              padding: EdgeInsets.all(ResponsiveHelper.getLargeSpacing(context)),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.warning.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.warning,
-                    size: ResponsiveHelper.getIconSize(context, 20),
-                  ),
-                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                  Expanded(
-                    child: Text(
-                      'Yêu cầu rút tiền sẽ được xử lý trong 1-3 ngày làm việc. Phí rút tiền: 11,000đ/giao dịch.',
-                      style: ResponsiveHelper.responsiveTextStyle(
-                        context: context,
-                        baseSize: 12,
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            SizedBox(height: ResponsiveHelper.getLargeSpacing(context)),
-            
             // Withdraw button
             SizedBox(
               width: double.infinity,
@@ -1086,7 +978,7 @@ class _WalletManagementPageState extends State<WalletManagementPage>
         );
 
         if (result.isSuccess && result.data?.data != null) {
-          final String paymentUrl = result.data!.data as String;
+          final String paymentUrl = result.data!.data['result'] as String;
           final uri = Uri.parse(paymentUrl);
           await launchUrl(uri, mode: LaunchMode.externalApplication);
           if (mounted) {
@@ -1162,58 +1054,57 @@ class _WalletManagementPageState extends State<WalletManagementPage>
     });
 
     try {
-      // Create withdrawal request data
-      final withdrawalData = {
-        'amount': amount,
-        'bankName': _bankNameController.text.trim(),
-        'accountNumber': _accountNumberController.text.trim(),
-        'accountHolder': _accountHolderController.text.trim(),
-        'note': _noteController.text.trim(),
-        'requestTime': DateTime.now().toIso8601String(),
-      };
+      // Create withdrawal request
+      final withdrawalRequest = WithdrawalRequest(
+        bankName: _bankNameController.text.trim(),
+        bankAccountNumber: _accountNumberController.text.trim(),
+        accountHolder: _accountHolderController.text.trim(),
+        note: _noteController.text.trim(),
+        amount: amount,
+      );
 
-      // TODO: Send withdrawal request to server
-      // final result = await _walletService.requestWithdrawal(withdrawalData);
-      print('Withdrawal request: $withdrawalData'); // Log for debugging
+      // Send withdrawal request to server
+      final result = await _walletService.requestWithdrawal(withdrawalRequest);
       
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: ResponsiveHelper.getSpacing(context)),
-                Expanded(
-                  child: Text(
-                    'Đã gửi yêu cầu rút ${CurrencyUtils.formatVND(amount)}! Sẽ xử lý trong 1-3 ngày. 📤',
-                    style: ResponsiveHelper.responsiveTextStyle(
-                      context: context,
-                      baseSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+      if (result.isSuccess) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  SizedBox(width: ResponsiveHelper.getSpacing(context)),
+                  Expanded(
+                    child: Text(
+                      'Đã gửi yêu cầu rút ${CurrencyUtils.formatVND(amount)}! Sẽ xử lý trong 1-3 ngày. 📤',
+                      style: ResponsiveHelper.responsiveTextStyle(
+                        context: context,
+                        baseSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 4),
             ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-        
-        // Clear form
-        _withdrawAmountController.clear();
-        _bankNameController.clear();
-        _accountNumberController.clear();
-        _accountHolderController.clear();
-        _noteController.clear();
+          );
+          
+          // Clear form
+          _withdrawAmountController.clear();
+          _bankNameController.clear();
+          _accountNumberController.clear();
+          _accountHolderController.clear();
+          _noteController.clear();
+        }
+      } else {
+        throw Exception(result.message ?? 'Không thể gửi yêu cầu rút tiền');
       }
     } catch (e) {
       if (mounted) {
