@@ -35,6 +35,7 @@ UserOrderData _$UserOrderDataFromJson(Map<String, dynamic> json) =>
       provinceName: json['provinceName'] as String?,
       shippingCode: json['shippingCode'] as String?,
       shippingFee: (json['shippingFee'] as num?)?.toDouble(),
+      paymentMethod: json['paymentMethod'] as String?,
     );
 
 Map<String, dynamic> _$UserOrderDataToJson(UserOrderData instance) =>
@@ -51,6 +52,7 @@ Map<String, dynamic> _$UserOrderDataToJson(UserOrderData instance) =>
       'provinceName': instance.provinceName,
       'shippingCode': instance.shippingCode,
       'shippingFee': instance.shippingFee,
+      'paymentMethod': instance.paymentMethod,
     };
 
 UserOrderDetail _$UserOrderDetailFromJson(Map<String, dynamic> json) =>

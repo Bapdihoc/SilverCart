@@ -32,6 +32,7 @@ class UserOrderData {
   final String? provinceName;
   final String? shippingCode;
   final double? shippingFee;
+  final String? paymentMethod;
 
   UserOrderData({
     required this.id,
@@ -46,6 +47,7 @@ class UserOrderData {
     this.provinceName,
     this.shippingCode,
     this.shippingFee,
+    this.paymentMethod
   });
 
   factory UserOrderData.fromJson(Map<String, dynamic> json) =>
