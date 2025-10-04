@@ -633,6 +633,32 @@ class _UserOrderListPageState extends State<UserOrderListPage> {
                               ],
                             ),
                           ],
+                          if (order.elderName == null ||
+                              order.elderName!.isEmpty) ...[
+                            SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.person_rounded,
+                                  size: 14,
+                                  color: AppColors.secondary,
+                                ),
+                                SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'Của tôi',
+                                    style: ResponsiveHelper.responsiveTextStyle(
+                                      context: context,
+                                      baseSize: 13,
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
